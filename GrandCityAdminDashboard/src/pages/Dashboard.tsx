@@ -3,16 +3,16 @@
 import { useState } from 'react';
 import { Project } from '../types';
 import { useGrandCityData } from '../hooks/useGrandCityData';
-import { 
-  Modal, 
-  ShiftForm, 
-  ProjectForm, 
-  CommunicationForm, 
-  PhotoForm, 
-  TaskForm, 
-  PaymentForm, 
-  VendorForm, 
-  ReportForm 
+import {
+  Modal,
+  ShiftForm,
+  ProjectForm,
+  CommunicationForm,
+  PhotoForm,
+  TaskForm,
+  PaymentForm,
+  VendorForm,
+  ReportForm
 } from '../components/Modal';
 
 export default function Dashboard() {
@@ -182,11 +182,10 @@ export default function Dashboard() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === tab.id
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === tab.id
                   ? 'border-blue-500 text-blue-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
+                }`}
             >
               {tab.name}
             </button>
@@ -273,8 +272,8 @@ export default function Dashboard() {
                 <span>PKR {(stats.budgetUsed / 1000000).toFixed(1)}M / PKR {(stats.monthlyBudget / 1000000).toFixed(1)}M</span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2">
-                <div 
-                  className="bg-blue-600 h-2 rounded-full" 
+                <div
+                  className="bg-blue-600 h-2 rounded-full"
                   style={{ width: `${(stats.budgetUsed / stats.monthlyBudget) * 100}%` }}
                 ></div>
               </div>
@@ -312,15 +311,14 @@ export default function Dashboard() {
             </div>
 
             <div className="bg-white p-6 rounded-lg shadow">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Today's Tasks</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Today&apos;s Tasks</h3>
               <div className="space-y-3">
                 {tasks.filter(task => task.due === '2025-10-01' || task.due === '2025-10-02').slice(0, 5).map((task) => (
                   <div key={task.id} className="flex items-center space-x-3">
                     <div className="flex-shrink-0">
-                      <div className={`w-3 h-3 rounded-full ${
-                        task.status === 'Completed' ? 'bg-green-500' : 
-                        task.status === 'In Progress' ? 'bg-blue-500' : 'bg-gray-300'
-                      }`}></div>
+                      <div className={`w-3 h-3 rounded-full ${task.status === 'Completed' ? 'bg-green-500' :
+                          task.status === 'In Progress' ? 'bg-blue-500' : 'bg-gray-300'
+                        }`}></div>
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900">{task.title}</p>
@@ -381,86 +379,85 @@ export default function Dashboard() {
               {payments
                 .filter(p => (!paymentTypeFilter || p.type === paymentTypeFilter) && (!paymentStatusFilter || p.status === paymentStatusFilter))
                 .map((p) => (
-                <li key={p.id} className="px-6 py-4">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h3 className="text-sm font-medium text-gray-900">{p.vendor}</h3>
-                      <p className="text-xs text-gray-500">{p.project} • Due: {p.due}</p>
-                      <p className="mt-1 text-sm text-gray-700">Amount: PKR {p.amount.toLocaleString()}</p>
+                  <li key={p.id} className="px-6 py-4">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-900">{p.vendor}</h3>
+                        <p className="text-xs text-gray-500">{p.project} • Due: {p.due}</p>
+                        <p className="mt-1 text-sm text-gray-700">Amount: PKR {p.amount.toLocaleString()}</p>
+                      </div>
+                      <div className="ml-4 flex items-center space-x-2">
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${p.type === 'Payable' ? 'bg-red-100 text-red-700' : 'bg-indigo-100 text-indigo-700'}`}>
+                          {p.type}
+                        </span>
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${p.status === 'Pending' ? 'bg-yellow-100 text-yellow-700' :
+                            p.status === 'Approved' ? 'bg-blue-100 text-blue-700' :
+                              p.status === 'Processed' ? 'bg-green-100 text-green-700' :
+                                p.status === 'Confirmed' ? 'bg-emerald-100 text-emerald-700' :
+                                  p.status === 'Audit Requested' ? 'bg-orange-100 text-orange-700' :
+                                    'bg-purple-100 text-purple-700'
+                          }`}>
+                          {p.status}
+                        </span>
+                        {/* Workflow actions */}
+                        {p.status === 'Pending' && (
+                          <button
+                            onClick={() => handleApprovePayment(p.id)}
+                            className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded"
+                          >
+                            Approve
+                          </button>
+                        )}
+                        {p.type === 'Payable' && p.status === 'Approved' && (
+                          <button
+                            onClick={() => handleProcessPayment(p.id)}
+                            className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded"
+                          >
+                            Process
+                          </button>
+                        )}
+                        {p.type === 'Receivable' && p.status === 'Approved' && (
+                          <button
+                            onClick={() => handleConfirmReceiptPayment(p.id)}
+                            className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded"
+                          >
+                            Confirm Receipt
+                          </button>
+                        )}
+                        {p.status !== 'Audit Requested' && p.status !== 'Processed' && (
+                          <button
+                            onClick={() => handleRequestAuditPayment(p.id)}
+                            className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded"
+                          >
+                            Request Audit
+                          </button>
+                        )}
+                        {p.status !== 'Amendment Requested' && p.status !== 'Processed' && (
+                          <button
+                            onClick={() => handleRequestAmendmentPayment(p.id)}
+                            className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded"
+                          >
+                            Request Amendment
+                          </button>
+                        )}
+                        {(p.status === 'Audit Requested' || p.status === 'Amendment Requested') && (
+                          <button
+                            onClick={() => handleApprovePayment(p.id)}
+                            className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded"
+                          >
+                            Return to Approval
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleDeletePayment(p.id)}
+                          className="text-red-600 hover:text-red-900 text-sm"
+                        >
+                          Remove
+                        </button>
+                      </div>
                     </div>
-                    <div className="ml-4 flex items-center space-x-2">
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${p.type === 'Payable' ? 'bg-red-100 text-red-700' : 'bg-indigo-100 text-indigo-700'}`}>
-                        {p.type}
-                      </span>
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                        p.status === 'Pending' ? 'bg-yellow-100 text-yellow-700' :
-                        p.status === 'Approved' ? 'bg-blue-100 text-blue-700' :
-                        p.status === 'Processed' ? 'bg-green-100 text-green-700' :
-                        p.status === 'Confirmed' ? 'bg-emerald-100 text-emerald-700' :
-                        p.status === 'Audit Requested' ? 'bg-orange-100 text-orange-700' :
-                        'bg-purple-100 text-purple-700'
-                      }`}>
-                        {p.status}
-                      </span>
-                      {/* Workflow actions */}
-                      {p.status === 'Pending' && (
-                        <button
-                          onClick={() => handleApprovePayment(p.id)}
-                          className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded"
-                        >
-                          Approve
-                        </button>
-                      )}
-                      {p.type === 'Payable' && p.status === 'Approved' && (
-                        <button
-                          onClick={() => handleProcessPayment(p.id)}
-                          className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded"
-                        >
-                          Process
-                        </button>
-                      )}
-                      {p.type === 'Receivable' && p.status === 'Approved' && (
-                        <button
-                          onClick={() => handleConfirmReceiptPayment(p.id)}
-                          className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded"
-                        >
-                          Confirm Receipt
-                        </button>
-                      )}
-                      {p.status !== 'Audit Requested' && p.status !== 'Processed' && (
-                        <button
-                          onClick={() => handleRequestAuditPayment(p.id)}
-                          className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded"
-                        >
-                          Request Audit
-                        </button>
-                      )}
-                      {p.status !== 'Amendment Requested' && p.status !== 'Processed' && (
-                        <button
-                          onClick={() => handleRequestAmendmentPayment(p.id)}
-                          className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded"
-                        >
-                          Request Amendment
-                        </button>
-                      )}
-                      {(p.status === 'Audit Requested' || p.status === 'Amendment Requested') && (
-                        <button
-                          onClick={() => handleApprovePayment(p.id)}
-                          className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded"
-                        >
-                          Return to Approval
-                        </button>
-                      )}
-                      <button
-                        onClick={() => handleDeletePayment(p.id)}
-                        className="text-red-600 hover:text-red-900 text-sm"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  </div>
-                </li>
-              ))}
+                  </li>
+                ))}
             </ul>
           </div>
         </div>
@@ -494,86 +491,86 @@ export default function Dashboard() {
                       )}
                       <p className="text-xs text-gray-500">Score: {Math.round(v.performance)}%</p>
                     </div>
-                  <div className="ml-4 flex items-center space-x-2">
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
-                      Performance {v.performance}%
-                    </span>
-                    <input
-                      type="number"
-                      className="w-20 border border-gray-300 rounded px-2 py-1 text-xs"
-                      min={0}
-                      max={100}
-                      value={vendorPerfEdits[v.id] ?? v.performance}
-                      onChange={(e) => setVendorPerfEdits(prev => ({ ...prev, [v.id]: parseInt(e.target.value || '0') }))}
-                    />
-                    <button
-                      onClick={() => handleUpdateVendorPerformance(v.id, vendorPerfEdits[v.id] ?? v.performance)}
-                      className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded"
-                    >
-                      Save
-                    </button>
                     <div className="ml-4 flex items-center space-x-2">
-                      <span className="text-xs text-gray-500">Sub-scoring</span>
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
+                        Performance {v.performance}%
+                      </span>
                       <input
                         type="number"
-                        min={0}
-                        max={100}
-                        placeholder="Quality"
-                        className="w-16 border border-gray-300 rounded px-2 py-1 text-xs"
-                        value={(vendorSubScores[v.id]?.quality ?? '') as any}
-                        onChange={(e) => setVendorSubScores(prev => ({
-                          ...prev,
-                          [v.id]: { ...(prev[v.id] || { quality: 0, timeliness: 0, compliance: 0 }), quality: parseInt(e.target.value || '0') }
-                        }))}
-                      />
-                      <input
-                        type="number"
-                        min={0}
-                        max={100}
-                        placeholder="Timeliness"
                         className="w-20 border border-gray-300 rounded px-2 py-1 text-xs"
-                        value={(vendorSubScores[v.id]?.timeliness ?? '') as any}
-                        onChange={(e) => setVendorSubScores(prev => ({
-                          ...prev,
-                          [v.id]: { ...(prev[v.id] || { quality: 0, timeliness: 0, compliance: 0 }), timeliness: parseInt(e.target.value || '0') }
-                        }))}
-                      />
-                      <input
-                        type="number"
                         min={0}
                         max={100}
-                        placeholder="Compliance"
-                        className="w-20 border border-gray-300 rounded px-2 py-1 text-xs"
-                        value={(vendorSubScores[v.id]?.compliance ?? '') as any}
-                        onChange={(e) => setVendorSubScores(prev => ({
-                          ...prev,
-                          [v.id]: { ...(prev[v.id] || { quality: 0, timeliness: 0, compliance: 0 }), compliance: parseInt(e.target.value || '0') }
-                        }))}
+                        value={vendorPerfEdits[v.id] ?? v.performance}
+                        onChange={(e) => setVendorPerfEdits(prev => ({ ...prev, [v.id]: parseInt(e.target.value || '0') }))}
                       />
                       <button
-                        onClick={() => {
-                          const s = vendorSubScores[v.id] || { quality: 0, timeliness: 0, compliance: 0 };
-                          const perf = Math.round(((s.quality || 0) + (s.timeliness || 0) + (s.compliance || 0)) / 3);
-                          handleUpdateVendorPerformance(v.id, perf);
-                        }}
-                        className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded"
+                        onClick={() => handleUpdateVendorPerformance(v.id, vendorPerfEdits[v.id] ?? v.performance)}
+                        className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded"
                       >
-                        Apply
+                        Save
+                      </button>
+                      <div className="ml-4 flex items-center space-x-2">
+                        <span className="text-xs text-gray-500">Sub-scoring</span>
+                        <input
+                          type="number"
+                          min={0}
+                          max={100}
+                          placeholder="Quality"
+                          className="w-16 border border-gray-300 rounded px-2 py-1 text-xs"
+                          value={(vendorSubScores[v.id]?.quality ?? '') as any}
+                          onChange={(e) => setVendorSubScores(prev => ({
+                            ...prev,
+                            [v.id]: { ...(prev[v.id] || { quality: 0, timeliness: 0, compliance: 0 }), quality: parseInt(e.target.value || '0') }
+                          }))}
+                        />
+                        <input
+                          type="number"
+                          min={0}
+                          max={100}
+                          placeholder="Timeliness"
+                          className="w-20 border border-gray-300 rounded px-2 py-1 text-xs"
+                          value={(vendorSubScores[v.id]?.timeliness ?? '') as any}
+                          onChange={(e) => setVendorSubScores(prev => ({
+                            ...prev,
+                            [v.id]: { ...(prev[v.id] || { quality: 0, timeliness: 0, compliance: 0 }), timeliness: parseInt(e.target.value || '0') }
+                          }))}
+                        />
+                        <input
+                          type="number"
+                          min={0}
+                          max={100}
+                          placeholder="Compliance"
+                          className="w-20 border border-gray-300 rounded px-2 py-1 text-xs"
+                          value={(vendorSubScores[v.id]?.compliance ?? '') as any}
+                          onChange={(e) => setVendorSubScores(prev => ({
+                            ...prev,
+                            [v.id]: { ...(prev[v.id] || { quality: 0, timeliness: 0, compliance: 0 }), compliance: parseInt(e.target.value || '0') }
+                          }))}
+                        />
+                        <button
+                          onClick={() => {
+                            const s = vendorSubScores[v.id] || { quality: 0, timeliness: 0, compliance: 0 };
+                            const perf = Math.round(((s.quality || 0) + (s.timeliness || 0) + (s.compliance || 0)) / 3);
+                            handleUpdateVendorPerformance(v.id, perf);
+                          }}
+                          className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded"
+                        >
+                          Apply
+                        </button>
+                      </div>
+                      <button
+                        onClick={() => handleDeleteVendor(v.id)}
+                        className="text-red-600 hover:text-red-900 text-sm"
+                      >
+                        Remove
                       </button>
                     </div>
-                    <button
-                      onClick={() => handleDeleteVendor(v.id)}
-                      className="text-red-600 hover:text-red-900 text-sm"
-                    >
-                      Remove
-                    </button>
                   </div>
-                </div>
-              </li>
-            ))}
-          </ul>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
-      </div>
       )}
 
       {/* Reports Tab */}
@@ -680,7 +677,7 @@ export default function Dashboard() {
               Add Project
             </button>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {projects.map((project) => (
               <div key={project.id} className="bg-white p-6 rounded-lg shadow">
@@ -715,8 +712,8 @@ export default function Dashboard() {
                     <span>{project.progress}%</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
-                      className="bg-blue-600 h-2 rounded-full" 
+                    <div
+                      className="bg-blue-600 h-2 rounded-full"
                       style={{ width: `${project.progress}%` }}
                     ></div>
                   </div>
@@ -759,7 +756,7 @@ export default function Dashboard() {
               Add Shift
             </button>
           </div>
-          
+
           <div className="bg-white shadow overflow-hidden sm:rounded-md">
             <ul className="divide-y divide-gray-200">
               {shifts.map((shift) => (
@@ -940,70 +937,70 @@ export default function Dashboard() {
               {photoLogs
                 .filter(log => {
                   if (!photoTagQuery.trim()) return true;
-                  const q = photoTagQuery.replace('#','').toLowerCase();
+                  const q = photoTagQuery.replace('#', '').toLowerCase();
                   return (log.tags || []).some(t => t.toLowerCase().includes(q));
                 })
                 .map((log) => (
-                <li key={log.id} className="px-6 py-4">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h3 className="text-sm font-medium text-gray-900">{log.project}</h3>
-                      <p className="text-xs text-gray-500">{log.location} • {log.time}</p>
-                      <p className="mt-1 text-sm text-gray-700">Photos: {log.photos} • Uploaded by: {log.uploadedBy}</p>
-                      {log.tags && log.tags.length > 0 && (
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          {log.tags.map((t, i) => (
-                            <span key={i} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
-                              #{t}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                      <div className="mt-2">
-                        <button
-                          onClick={() => setOpenPhotoId(openPhotoId === log.id ? null : log.id)}
-                          className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded"
-                        >
-                          {openPhotoId === log.id ? 'Hide Photos' : 'View Photos'}
-                        </button>
-                        {openPhotoId === log.id && (
-                          <p className="mt-2 text-xs text-gray-500">Viewing {log.photos} photos (preview coming soon)</p>
+                  <li key={log.id} className="px-6 py-4">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-900">{log.project}</h3>
+                        <p className="text-xs text-gray-500">{log.location} • {log.time}</p>
+                        <p className="mt-1 text-sm text-gray-700">Photos: {log.photos} • Uploaded by: {log.uploadedBy}</p>
+                        {log.tags && log.tags.length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {log.tags.map((t, i) => (
+                              <span key={i} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+                                #{t}
+                              </span>
+                            ))}
+                          </div>
                         )}
-                      </div>
-                      {log.comments && log.comments.length > 0 && (
-                        <div className="mt-3 space-y-2">
-                          <p className="text-xs text-gray-500">Comments</p>
-                          {log.comments.map(c => (
-                            <div key={c.id} className="text-xs text-gray-700">
-                              <span className="font-medium">{c.user}:</span> {c.text} <span className="text-gray-400">• {c.time}</span>
-                            </div>
-                          ))}
+                        <div className="mt-2">
+                          <button
+                            onClick={() => setOpenPhotoId(openPhotoId === log.id ? null : log.id)}
+                            className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded"
+                          >
+                            {openPhotoId === log.id ? 'Hide Photos' : 'View Photos'}
+                          </button>
+                          {openPhotoId === log.id && (
+                            <p className="mt-2 text-xs text-gray-500">Viewing {log.photos} photos (preview coming soon)</p>
+                          )}
                         </div>
-                      )}
-                      <div className="mt-3 flex items-center gap-2">
-                        <input
-                          type="text"
-                          className="flex-1 border border-gray-300 rounded px-3 py-1 text-xs"
-                          placeholder="Add a comment"
-                          value={photoCommentInput[log.id] || ''}
-                          onChange={(e) => setPhotoCommentInput(prev => ({ ...prev, [log.id]: e.target.value }))}
-                        />
-                        <button
-                          onClick={() => {
-                            const text = photoCommentInput[log.id] || '';
-                            if (!text.trim()) return;
-                            handleAddPhotoComment(log.id, text.trim());
-                            setPhotoCommentInput(prev => ({ ...prev, [log.id]: '' }));
-                          }}
-                          className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded"
-                        >
-                          Comment
-                        </button>
+                        {log.comments && log.comments.length > 0 && (
+                          <div className="mt-3 space-y-2">
+                            <p className="text-xs text-gray-500">Comments</p>
+                            {log.comments.map(c => (
+                              <div key={c.id} className="text-xs text-gray-700">
+                                <span className="font-medium">{c.user}:</span> {c.text} <span className="text-gray-400">• {c.time}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        <div className="mt-3 flex items-center gap-2">
+                          <input
+                            type="text"
+                            className="flex-1 border border-gray-300 rounded px-3 py-1 text-xs"
+                            placeholder="Add a comment"
+                            value={photoCommentInput[log.id] || ''}
+                            onChange={(e) => setPhotoCommentInput(prev => ({ ...prev, [log.id]: e.target.value }))}
+                          />
+                          <button
+                            onClick={() => {
+                              const text = photoCommentInput[log.id] || '';
+                              if (!text.trim()) return;
+                              handleAddPhotoComment(log.id, text.trim());
+                              setPhotoCommentInput(prev => ({ ...prev, [log.id]: '' }));
+                            }}
+                            className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded"
+                          >
+                            Comment
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </li>
-              ))}
+                  </li>
+                ))}
             </ul>
           </div>
         </div>
@@ -1024,7 +1021,7 @@ export default function Dashboard() {
               Add Task
             </button>
           </div>
-          
+
           <div className="bg-white shadow overflow-hidden sm:rounded-md">
             <ul className="divide-y divide-gray-200">
               {tasks.map((task) => (
@@ -1055,8 +1052,8 @@ export default function Dashboard() {
                           <span>{task.completion}%</span>
                         </div>
                         <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div 
-                            className="bg-blue-600 h-2 rounded-full" 
+                          <div
+                            className="bg-blue-600 h-2 rounded-full"
                             style={{ width: `${task.completion}%` }}
                           ></div>
                         </div>
