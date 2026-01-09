@@ -1,34 +1,35 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Grand City HQ - Guest Pass Management System</title>
-    
+
     <!-- React and Babel from local files -->
     <script src="./react.production.min.js"></script>
     <script src="./react-dom.production.min.js"></script>
     <script src="./babel.min.js"></script>
-    
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
+
     <!-- QR Code and utilities from local files -->
     <script src="./qrcode.min.js"></script>
     <script src="./html2canvas.min.js"></script>
     <script src="./jsQR.js"></script>
-    
+
     <!-- Global error handler -->
     <script>
-        window.addEventListener('error', function(e) {
+        window.addEventListener('error', function (e) {
             console.error('Global error:', e.error || e.message);
         });
-        
-        window.addEventListener('unhandledrejection', function(e) {
+
+        window.addEventListener('unhandledrejection', function (e) {
             console.error('Unhandled promise rejection:', e.reason);
         });
     </script>
-    
+
     <!-- Library loading verification and fallback system -->
     <script>
         // Enhanced library loading with fallbacks
@@ -49,9 +50,9 @@
             window.libraryLoadStatus.html2canvas = typeof html2canvas !== 'undefined';
             window.libraryLoadStatus.jsQR = typeof jsQR !== 'undefined';
             window.libraryLoadStatus.tailwind = typeof tailwind !== 'undefined';
-            
+
             const missingLibraries = Object.keys(window.libraryLoadStatus).filter(key => !window.libraryLoadStatus[key]);
-            
+
             if (missingLibraries.length > 0) {
                 console.warn('Missing libraries:', missingLibraries.join(', '));
                 return false;
@@ -65,7 +66,7 @@
         function waitForLibraries(callback, timeout = 10000) {
             const startTime = Date.now();
             const checkInterval = 100; // Check every 100ms
-            
+
             const interval = setInterval(() => {
                 if (checkLibraryStatus()) {
                     clearInterval(interval);
@@ -79,13 +80,13 @@
         }
 
         // Global error handler for library loading
-        window.addEventListener('error', function(e) {
+        window.addEventListener('error', function (e) {
             console.error('Script loading error:', e.filename, e.message);
         });
 
         // Initialize library checking when DOM is ready
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', function() {
+            document.addEventListener('DOMContentLoaded', function () {
                 console.log('DOM loaded, checking libraries...');
             });
         } else {
@@ -93,21 +94,27 @@
         }
     </script>
 </head>
+
 <body>
     <div id="root">
         <!-- Loading indicator -->
-        <div style="display: flex; align-items: center; justify-content: center; min-height: 100vh; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+        <div
+            style="display: flex; align-items: center; justify-content: center; min-height: 100vh; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
             <div style="text-align: center; color: white;">
-                <div style="width: 60px; height: 60px; border: 4px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px;"></div>
+                <div
+                    style="width: 60px; height: 60px; border: 4px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px;">
+                </div>
                 <h2 style="font-size: 24px; font-weight: bold; margin-bottom: 10px;">Grand City Guest Pass</h2>
                 <p style="font-size: 14px; opacity: 0.9;">Loading system...</p>
             </div>
         </div>
     </div>
-    
+
     <style>
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            to {
+                transform: rotate(360deg);
+            }
         }
     </style>
 
@@ -117,7 +124,7 @@
             document.getElementById('root').innerHTML = '<div style="padding: 40px; text-align: center; color: red;"><h1>Error: React library failed to load</h1><p>Please refresh the page or contact support.</p></div>';
             throw new Error('React not loaded');
         }
-        
+
         const { useState, useEffect, useRef } = React;
 
         // QR Code Generation Utility with enhanced loading
@@ -126,22 +133,22 @@
                 // Wait for QRCode library to be available
                 let attempts = 0;
                 const maxAttempts = 50; // 5 seconds timeout
-                
+
                 while (typeof QRCode === 'undefined' && attempts < maxAttempts) {
                     await new Promise(resolve => setTimeout(resolve, 100));
                     attempts++;
                 }
-                
+
                 if (typeof QRCode === 'undefined') {
                     console.error('QR code library failed to load after 5 seconds');
                     return null;
                 }
-                
+
                 // Create a temporary container div for QR code generation
                 const tempDiv = document.createElement('div');
                 tempDiv.style.display = 'none';
                 document.body.appendChild(tempDiv);
-                
+
                 // Generate QR code in the temporary div
                 const qrCode = new QRCode(tempDiv, {
                     text: text,
@@ -151,10 +158,10 @@
                     colorLight: '#FFFFFF',
                     correctLevel: QRCode.CorrectLevel.M
                 });
-                
+
                 // Wait for QR code to be generated
                 await new Promise(resolve => setTimeout(resolve, 100));
-                
+
                 // Find the canvas element created by QRCode library
                 const canvas = tempDiv.querySelector('canvas');
                 if (!canvas) {
@@ -162,13 +169,13 @@
                     document.body.removeChild(tempDiv);
                     return null;
                 }
-                
+
                 // Get data URL from canvas
                 const dataUrl = canvas.toDataURL('image/png');
-                
+
                 // Clean up temporary div
                 document.body.removeChild(tempDiv);
-                
+
                 return dataUrl;
             } catch (e) {
                 console.error('QR generation error:', e);
@@ -193,16 +200,16 @@
                 ...options.headers,
                 'Authorization': token ? `Bearer ${token}` : ''
             };
-            
+
             const response = await fetch(url, { ...options, headers });
-            
+
             // If unauthorized, redirect to login
             if (response.status === 401 || response.status === 403) {
                 sessionStorage.removeItem('authToken');
                 sessionStorage.removeItem('user');
                 window.location.reload();
             }
-            
+
             return response;
         };
 
@@ -293,7 +300,7 @@
                 console.log('Full result:', result);
                 console.log('Visit code from API:', result.visit_code);
                 console.log('Visit ID from API:', result.id);
-                
+
                 return result;
             } catch (e) {
                 console.error('Error saving visit:', e);
@@ -331,7 +338,7 @@
             const passRef = useRef(null);
             const [qrCodeUrl, setQrCodeUrl] = useState('');
             const [isGeneratingQR, setIsGeneratingQR] = useState(true);
-            
+
             // Fallback for executive if not found
             const executiveData = executive || { name: 'Executive', position: 'Staff' };
 
@@ -368,14 +375,14 @@
                             alert('Download feature is not available. Please try again later.');
                             return;
                         }
-                        
+
                         // Wait a bit for any async operations to complete
                         await new Promise(resolve => setTimeout(resolve, 500));
-                        
+
                         // Clone the pass element to render it without parent constraints
                         const passElement = passRef.current;
                         const clone = passElement.cloneNode(true);
-                        
+
                         // Create temporary container
                         const tempContainer = document.createElement('div');
                         tempContainer.style.position = 'absolute';
@@ -386,7 +393,7 @@
                         tempContainer.style.overflow = 'visible';
                         tempContainer.appendChild(clone);
                         document.body.appendChild(tempContainer);
-                        
+
                         const canvas = await html2canvas(clone, {
                             backgroundColor: '#ffffff',
                             scale: 2,
@@ -394,24 +401,24 @@
                             allowTaint: true,
                             logging: false
                         });
-                        
+
                         // Remove temporary container
                         document.body.removeChild(tempContainer);
-                        
+
                         // Convert canvas to data URL
                         const dataURL = canvas.toDataURL('image/png');
-                        
+
                         // Create download link
                         const link = document.createElement('a');
                         link.download = `GrandCity-Pass-${visit.code}.png`;
                         link.href = dataURL;
                         link.style.display = 'none';
-                        
+
                         // Add to document, click, and remove
                         document.body.appendChild(link);
                         link.click();
                         document.body.removeChild(link);
-                        
+
                     } catch (e) {
                         console.error('Download error:', e);
                         alert('Download feature requires a modern browser. Error: ' + e.message);
@@ -447,10 +454,10 @@ Visit Management System`;
                     // Assume it's a local number, add country code
                     cleanPhone = '92' + cleanPhone;
                 }
-                
+
                 // Use WhatsApp web link as fallback
                 const whatsappUrl = `https://web.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(message)}`;
-                
+
                 try {
                     // Try to open in a new tab
                     const newWindow = window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
@@ -494,7 +501,7 @@ Visit Management System`;
                         <div className="p-6">
                             <div className="flex justify-between items-center mb-6">
                                 <h2 className="text-2xl font-bold text-gray-900">Digital Visitor Pass</h2>
-                                <button 
+                                <button
                                     onClick={onClose}
                                     className="text-gray-400 hover:text-gray-600 transition-colors"
                                 >
@@ -600,7 +607,7 @@ Visit Management System`;
                                     className="w-full px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors font-semibold flex items-center justify-center space-x-2"
                                 >
                                     <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
                                     </svg>
                                     <span>Share via WhatsApp</span>
                                 </button>
@@ -643,7 +650,7 @@ Visit Management System`;
                                         <div>
                                             <p className="text-sm font-medium text-orange-900">Awaiting Approval</p>
                                             <p className="text-sm text-orange-700 mt-1">
-                                                The executive has been notified. You'll receive confirmation once approved. 
+                                                The executive has been notified. You'll receive confirmation once approved.
                                                 You can share this pass now - it will be valid once approved.
                                             </p>
                                         </div>
@@ -663,24 +670,17 @@ Visit Management System`;
             const [error, setError] = useState('');
             const [loading, setLoading] = useState(false);
 
-            // Set first executive as default when executives list is loaded
             useEffect(() => {
-                console.log('Executives prop updated:', executives.length, 'executives');
                 if (executives.length > 0 && !selectedExec) {
                     setSelectedExec(executives[0].id);
-                    console.log('Set default executive to:', executives[0].name);
                 }
             }, [executives.length]);
 
-            // Map role/executive selection to email for authentication
             const getEmailFromSelection = () => {
                 if (role === 'executive' && selectedExec) {
                     const exec = executives.find(e => e.id === selectedExec);
-                    console.log('Selected executive:', exec);
                     return exec?.email;
                 }
-                // For non-executive roles, use a default pattern
-                // This assumes users exist with these emails
                 if (role === 'admin') return 'admin@grandcity.pk';
                 if (role === 'staff') return 'staff@grandcity.pk';
                 if (role === 'guard') return 'guard@grandcity.pk';
@@ -695,8 +695,7 @@ Visit Management System`;
                 }
 
                 const email = getEmailFromSelection();
-                console.log('Login attempt - Role:', role, 'Email:', email);
-                
+
                 if (!email) {
                     setError('Please select a valid role/executive');
                     return;
@@ -708,9 +707,7 @@ Visit Management System`;
                 try {
                     const response = await fetch('/api/login', {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ email, password }),
                     });
 
@@ -722,11 +719,9 @@ Visit Management System`;
                         return;
                     }
 
-                    // Store token in sessionStorage
                     sessionStorage.setItem('authToken', data.token);
                     sessionStorage.setItem('user', JSON.stringify(data.user));
 
-                    // Call onLogin with user data
                     onLogin({
                         role: data.user.role,
                         executiveId: data.user.executiveId,
@@ -750,23 +745,23 @@ Visit Management System`;
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                                 </svg>
                             </div>
-                            <h1 className="text-3xl font-bold text-gray-800">Grand City HQ</h1>
-                            <p className="text-gray-600 mt-2">Guest Pass Management System</p>
+                            <h2 className="text-3xl font-bold text-gray-900">Grand City HQ</h2>
+                            <p className="text-gray-500 mt-2">Guest Pass System</p>
                         </div>
 
                         <div className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">Select Role</label>
-                                <select 
-                                    value={role} 
+                                <select
+                                    value={role}
                                     onChange={(e) => setRole(e.target.value)}
-                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white"
                                 >
                                     <option value="executive">Executive</option>
                                     <option value="staff">Staff Member</option>
-                                    <option value="guard">Security Guard</option>
                                     <option value="receptionist">Receptionist</option>
-                                    <option value="admin">Admin</option>
+                                    <option value="guard">Security Guard</option>
+                                    <option value="admin">Administrator</option>
                                 </select>
                             </div>
 
@@ -778,8 +773,8 @@ Visit Management System`;
                                             Loading executives...
                                         </div>
                                     ) : (
-                                        <select 
-                                            value={selectedExec} 
+                                        <select
+                                            value={selectedExec}
                                             onChange={(e) => setSelectedExec(e.target.value)}
                                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                                         >
@@ -823,8 +818,6 @@ Visit Management System`;
                                 {loading ? 'Logging in...' : 'Login to Dashboard'}
                             </button>
                         </div>
-
-
                     </div>
                 </div>
             );
@@ -832,10 +825,10 @@ Visit Management System`;
 
         const ExecutiveDashboard = ({ user }) => {
             const [visits, setVisits] = useState([]);
-            const executive = EXECUTIVES.find(e => e.id === user.executiveId) || { 
-                name: user.name || 'Executive', 
+            const executive = EXECUTIVES.find(e => e.id === user.executiveId) || {
+                name: user.name || 'Executive',
                 position: user.role || 'Executive',
-                id: user.executiveId 
+                id: user.executiveId
             };
 
             useEffect(() => {
@@ -951,7 +944,7 @@ Visit Management System`;
                                                     <div className="ml-16 space-y-1">
                                                         <p className="text-sm text-gray-700"><span className="font-medium">Purpose:</span> {visit.purpose}</p>
                                                         <p className="text-sm text-gray-700">
-                                                            <span className="font-medium">Type:</span> 
+                                                            <span className="font-medium">Type:</span>
                                                             <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-purple-100 text-purple-800">
                                                                 {visit.type === 'walk_in' ? 'Walk-in' : 'Scheduled'}
                                                             </span>
@@ -1055,20 +1048,20 @@ Visit Management System`;
 
             const handleSubmit = async (e) => {
                 e.preventDefault();
-                
+
                 // For walk-in, use current time
                 const isWalkIn = formData.visitType === 'walk_in';
                 const currentTime = new Date();
                 const visitDate = isWalkIn ? new Date().toISOString().split('T')[0] : formData.date;
-                
+
                 // Format time properly for database (HH:MM:SS)
                 const formatTime = (date) => {
                     return date.toTimeString().split(' ')[0].substring(0, 5); // Returns HH:MM
                 };
-                
+
                 const timeFrom = isWalkIn ? formatTime(currentTime) : formData.timeFrom;
                 const timeTo = isWalkIn ? formatTime(new Date(currentTime.getTime() + 3600000)) : formData.timeTo;
-                
+
                 const visit = {
                     id: Date.now(),
                     code: null, // Will be set from database
@@ -1088,15 +1081,15 @@ Visit Management System`;
                     type: formData.visitType,
                     createdAt: new Date().toISOString()
                 };
-                
+
                 try {
                     const result = await saveVisit(visit);
-                    
+
                     console.log('=== Staff Dashboard - After Save ===');
                     console.log('Result object:', result);
                     console.log('Result.visit_code:', result?.visit_code);
                     console.log('Original visit.code before spread:', visit.code);
-                    
+
                     // Create new visit object with database-generated code
                     // API returns visit object directly with visit_code property
                     if (result && result.visit_code) {
@@ -1105,23 +1098,23 @@ Visit Management System`;
                             code: result.visit_code,
                             id: result.id
                         };
-                        
+
                         // Freeze the code to catch any modifications
                         Object.defineProperty(visitWithCode, 'code', {
                             value: result.visit_code,
                             writable: false,
                             configurable: false
                         });
-                        
+
                         console.log('Created visitWithCode object:', visitWithCode);
                         console.log('visitWithCode.code AFTER creation:', visitWithCode.code);
                         console.log('Verify: result.visit_code was:', result.visit_code);
                         console.log('=== ABOUT TO SHOW PASS WITH CODE:', visitWithCode.code, '===');
                         console.log('Type check - code is:', typeof visitWithCode.code, visitWithCode.code);
-                        
+
                         // Show digital pass preview with database code
                         setCreatedVisit(visitWithCode);
-                        
+
                         // Verify state update (will log on next render)
                         setTimeout(() => {
                             console.log('=== STATE CHECK: createdVisit should be set now ===');
@@ -1130,10 +1123,10 @@ Visit Management System`;
                         console.warn('No visit_code in response, using visit as-is');
                         setCreatedVisit(visit);
                     }
-                    
+
                     setShowPassPreview(true);
                     setShowScheduleForm(false);
-                    
+
                     // Reset form
                     setFormData({
                         visitorName: '',
@@ -1155,20 +1148,20 @@ Visit Management System`;
             // Set first executive as default when executives list is loaded
             useEffect(() => {
                 if (EXECUTIVES.length > 0 && !formData.executiveId) {
-                    setFormData(prev => ({...prev, executiveId: EXECUTIVES[0].id}));
+                    setFormData(prev => ({ ...prev, executiveId: EXECUTIVES[0].id }));
                 }
             }, [EXECUTIVES.length]);
 
             return (
                 <div className="min-h-screen bg-gray-50">
                     {showPassPreview && createdVisit && (
-                        <DigitalPass 
+                        <DigitalPass
                             visit={createdVisit}
                             executive={EXECUTIVES.find(e => e.id === createdVisit.executiveId)}
                             onClose={() => setShowPassPreview(false)}
                         />
                     )}
-                    
+
                     <div className="bg-white shadow-sm border-b">
                         <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
                             <h1 className="text-2xl font-bold text-gray-900">Staff Dashboard</h1>
@@ -1196,12 +1189,11 @@ Visit Management System`;
                                         <div className="grid grid-cols-2 gap-4">
                                             <button
                                                 type="button"
-                                                onClick={() => setFormData({...formData, visitType: 'scheduled'})}
-                                                className={`px-4 py-3 rounded-lg border-2 transition-all ${
-                                                    formData.visitType === 'scheduled' 
-                                                    ? 'border-indigo-600 bg-indigo-50 text-indigo-700 font-semibold' 
-                                                    : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
-                                                }`}
+                                                onClick={() => setFormData({ ...formData, visitType: 'scheduled' })}
+                                                className={`px-4 py-3 rounded-lg border-2 transition-all ${formData.visitType === 'scheduled'
+                                                        ? 'border-indigo-600 bg-indigo-50 text-indigo-700 font-semibold'
+                                                        : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+                                                    }`}
                                             >
                                                 <div className="flex items-center justify-center space-x-2">
                                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1213,12 +1205,11 @@ Visit Management System`;
                                             </button>
                                             <button
                                                 type="button"
-                                                onClick={() => setFormData({...formData, visitType: 'walk_in'})}
-                                                className={`px-4 py-3 rounded-lg border-2 transition-all ${
-                                                    formData.visitType === 'walk_in' 
-                                                    ? 'border-purple-600 bg-purple-50 text-purple-700 font-semibold' 
-                                                    : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
-                                                }`}
+                                                onClick={() => setFormData({ ...formData, visitType: 'walk_in' })}
+                                                className={`px-4 py-3 rounded-lg border-2 transition-all ${formData.visitType === 'walk_in'
+                                                        ? 'border-purple-600 bg-purple-50 text-purple-700 font-semibold'
+                                                        : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+                                                    }`}
                                             >
                                                 <div className="flex items-center justify-center space-x-2">
                                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1241,7 +1232,7 @@ Visit Management System`;
                                                     type="text"
                                                     required
                                                     value={formData.visitorName}
-                                                    onChange={(e) => setFormData({...formData, visitorName: e.target.value})}
+                                                    onChange={(e) => setFormData({ ...formData, visitorName: e.target.value })}
                                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                                                     placeholder="John Doe"
                                                 />
@@ -1251,7 +1242,7 @@ Visit Management System`;
                                                 <input
                                                     type="text"
                                                     value={formData.company}
-                                                    onChange={(e) => setFormData({...formData, company: e.target.value})}
+                                                    onChange={(e) => setFormData({ ...formData, company: e.target.value })}
                                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                                                     placeholder="ABC Corporation"
                                                 />
@@ -1262,7 +1253,7 @@ Visit Management System`;
                                                     type="tel"
                                                     required
                                                     value={formData.phone}
-                                                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                                                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                                                     placeholder="+92-300-1234567"
                                                 />
@@ -1272,7 +1263,7 @@ Visit Management System`;
                                                 <input
                                                     type="email"
                                                     value={formData.email}
-                                                    onChange={(e) => setFormData({...formData, email: e.target.value})}
+                                                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                                                     placeholder="visitor@example.com"
                                                 />
@@ -1289,7 +1280,7 @@ Visit Management System`;
                                                 <select
                                                     required
                                                     value={formData.executiveId}
-                                                    onChange={(e) => setFormData({...formData, executiveId: e.target.value})}
+                                                    onChange={(e) => setFormData({ ...formData, executiveId: e.target.value })}
                                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                                                 >
                                                     {EXECUTIVES.map(exec => (
@@ -1305,7 +1296,7 @@ Visit Management System`;
                                                 <textarea
                                                     required
                                                     value={formData.purpose}
-                                                    onChange={(e) => setFormData({...formData, purpose: e.target.value})}
+                                                    onChange={(e) => setFormData({ ...formData, purpose: e.target.value })}
                                                     rows={3}
                                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                                                     placeholder="Business meeting, document submission, etc."
@@ -1325,7 +1316,7 @@ Visit Management System`;
                                                         type="date"
                                                         required
                                                         value={formData.date}
-                                                        onChange={(e) => setFormData({...formData, date: e.target.value})}
+                                                        onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                                                         min={new Date().toISOString().split('T')[0]}
                                                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                                                     />
@@ -1336,7 +1327,7 @@ Visit Management System`;
                                                         type="time"
                                                         required
                                                         value={formData.timeFrom}
-                                                        onChange={(e) => setFormData({...formData, timeFrom: e.target.value})}
+                                                        onChange={(e) => setFormData({ ...formData, timeFrom: e.target.value })}
                                                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                                                     />
                                                 </div>
@@ -1346,7 +1337,7 @@ Visit Management System`;
                                                         type="time"
                                                         required
                                                         value={formData.timeTo}
-                                                        onChange={(e) => setFormData({...formData, timeTo: e.target.value})}
+                                                        onChange={(e) => setFormData({ ...formData, timeTo: e.target.value })}
                                                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                                                     />
                                                 </div>
@@ -1364,7 +1355,7 @@ Visit Management System`;
                                                 <div>
                                                     <p className="text-sm font-medium text-purple-900">Walk-in Visitor Registration</p>
                                                     <p className="text-sm text-purple-700 mt-1">
-                                                        Visit will be registered for <strong>today</strong> at the <strong>current time</strong>. 
+                                                        Visit will be registered for <strong>today</strong> at the <strong>current time</strong>.
                                                         The executive will be immediately notified for approval.
                                                     </p>
                                                 </div>
@@ -1382,11 +1373,10 @@ Visit Management System`;
                                         </button>
                                         <button
                                             type="submit"
-                                            className={`px-6 py-2 text-white rounded-lg transition-colors font-medium ${
-                                                formData.visitType === 'walk_in' 
-                                                ? 'bg-purple-600 hover:bg-purple-700' 
-                                                : 'bg-indigo-600 hover:bg-indigo-700'
-                                            }`}
+                                            className={`px-6 py-2 text-white rounded-lg transition-colors font-medium ${formData.visitType === 'walk_in'
+                                                    ? 'bg-purple-600 hover:bg-purple-700'
+                                                    : 'bg-indigo-600 hover:bg-indigo-700'
+                                                }`}
                                         >
                                             {formData.visitType === 'walk_in' ? 'Register Walk-in' : 'Schedule Visit'}
                                         </button>
@@ -1427,11 +1417,11 @@ Visit Management System`;
                             setScanError('Camera API not supported in this browser');
                             return;
                         }
-                        
+
                         // Request permission first to get device labels
                         const stream = await navigator.mediaDevices.getUserMedia({ video: true });
                         stream.getTracks().forEach(track => track.stop());
-                        
+
                         const deviceInfos = await navigator.mediaDevices.enumerateDevices();
                         const videoDevices = deviceInfos.filter(device => device.kind === 'videoinput');
                         setDevices(videoDevices);
@@ -1440,7 +1430,7 @@ Visit Management System`;
                         }
                     } catch (err) {
                         console.error('Error getting devices:', err);
-                        const errorMsg = err.name === 'NotAllowedError' 
+                        const errorMsg = err.name === 'NotAllowedError'
                             ? 'Camera permission denied. Please enable camera access in your browser settings.'
                             : 'Unable to access camera devices';
                         setScanError(errorMsg);
@@ -1453,15 +1443,15 @@ Visit Management System`;
             const startCamera = async () => {
                 try {
                     setScanError('');
-                    
+
                     // Request camera permission
-                    const stream = await navigator.mediaDevices.getUserMedia({ 
-                        video: { 
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        video: {
                             deviceId: selectedDevice ? { exact: selectedDevice } : undefined,
                             facingMode: 'environment' // Prefer back camera on mobile
-                        } 
+                        }
                     });
-                    
+
                     if (videoRef.current) {
                         videoRef.current.srcObject = stream;
                         videoRef.current.play();
@@ -1472,7 +1462,7 @@ Visit Management System`;
                 } catch (err) {
                     console.error('Camera error:', err);
                     setHasPermission(false);
-                    const errorMsg = err.name === 'NotAllowedError' 
+                    const errorMsg = err.name === 'NotAllowedError'
                         ? 'Camera permission denied. Please enable camera access in your browser settings.'
                         : 'Camera not available or permission denied';
                     setScanError(errorMsg);
@@ -1591,7 +1581,7 @@ Visit Management System`;
                             ref={canvasRef}
                             className="hidden"
                         />
-                        
+
                         {!isScanning && (
                             <div className="bg-gray-100 rounded-lg p-12 text-center">
                                 <svg className="w-16 h-16 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1653,7 +1643,7 @@ Visit Management System`;
             // Set first executive as default when executives list is loaded
             useEffect(() => {
                 if (EXECUTIVES.length > 0 && !walkInData.executiveId) {
-                    setWalkInData(prev => ({...prev, executiveId: EXECUTIVES[0].id}));
+                    setWalkInData(prev => ({ ...prev, executiveId: EXECUTIVES[0].id }));
                 }
             }, [EXECUTIVES.length]);
 
@@ -1663,16 +1653,16 @@ Visit Management System`;
                     setScanResult({ valid: false, message: 'Please enter a valid visit code' });
                     return;
                 }
-                
+
                 const scanCode = inputCode.trim().toUpperCase();
                 if (!scanCode) {
                     setScanResult({ valid: false, message: 'Please enter a visit code' });
                     return;
                 }
-                
+
                 const visits = await getVisits();
                 const visit = visits.find(v => v.code.toUpperCase() === scanCode);
-                
+
                 if (!visit) {
                     setScanResult({ valid: false, message: 'Invalid visit code' });
                     return;
@@ -1723,7 +1713,7 @@ Visit Management System`;
                         alert('Visitor checked in successfully!');
                         setScanInput('');
                         setScanResult(null);
-                        
+
                         // Reload today's visits
                         const visits = await getVisits();
                         const today = new Date().toISOString().split('T')[0];
@@ -1737,7 +1727,7 @@ Visit Management System`;
 
             const handleWalkInSubmit = async (e) => {
                 e.preventDefault();
-                
+
                 const visit = {
                     id: Date.now(),
                     code: null, // Will be set from database
@@ -1756,13 +1746,13 @@ Visit Management System`;
                     type: 'walk_in',
                     createdAt: new Date().toISOString()
                 };
-                
+
                 try {
                     const result = await saveVisit(visit);
-                    
+
                     console.log('=== Security Guard Dashboard - After Save ===');
                     console.log('Result.visit_code:', result?.visit_code);
-                    
+
                     // Create new visit object with database-generated code
                     // API returns visit object directly with visit_code property
                     if (result && result.visit_code) {
@@ -1772,13 +1762,13 @@ Visit Management System`;
                             id: result.id
                         };
                         console.log('Security Guard - visitWithCode.code:', visitWithCode.code);
-                        
+
                         // Show digital pass preview with database code
                         setCreatedVisit(visitWithCode);
                     } else {
                         setCreatedVisit(visit);
                     }
-                    
+
                     setShowPassPreview(true);
                     setShowWalkInForm(false);
                     setWalkInData({ name: '', company: '', phone: '', executiveId: '', purpose: '' });
@@ -1790,13 +1780,13 @@ Visit Management System`;
             return (
                 <div className="min-h-screen bg-gray-50">
                     {showPassPreview && createdVisit && (
-                        <DigitalPass 
+                        <DigitalPass
                             visit={createdVisit}
                             executive={EXECUTIVES.find(e => e.id === createdVisit.executiveId)}
                             onClose={() => setShowPassPreview(false)}
                         />
                     )}
-                    
+
                     <div className="bg-white shadow-sm border-b">
                         <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
                             <h1 className="text-2xl font-bold text-gray-900">Security Guard Dashboard</h1>
@@ -1844,8 +1834,8 @@ Visit Management System`;
                                         <h3 className="text-lg font-semibold text-gray-900">Camera QR Scanner</h3>
                                         <p className="text-sm text-gray-600">Use your device camera to scan QR codes</p>
                                     </div>
-                                    
-                                    <QRScanner 
+
+                                    <QRScanner
                                         onScanSuccess={handleQRScanSuccess}
                                         onScanError={handleQRScanError}
                                     />
@@ -1939,7 +1929,7 @@ Visit Management System`;
                                             type="text"
                                             required
                                             value={walkInData.name}
-                                            onChange={(e) => setWalkInData({...walkInData, name: e.target.value})}
+                                            onChange={(e) => setWalkInData({ ...walkInData, name: e.target.value })}
                                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
                                             placeholder="Enter visitor name"
                                         />
@@ -1949,7 +1939,7 @@ Visit Management System`;
                                         <input
                                             type="text"
                                             value={walkInData.company}
-                                            onChange={(e) => setWalkInData({...walkInData, company: e.target.value})}
+                                            onChange={(e) => setWalkInData({ ...walkInData, company: e.target.value })}
                                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
                                             placeholder="Company name"
                                         />
@@ -1960,7 +1950,7 @@ Visit Management System`;
                                             type="tel"
                                             required
                                             value={walkInData.phone}
-                                            onChange={(e) => setWalkInData({...walkInData, phone: e.target.value})}
+                                            onChange={(e) => setWalkInData({ ...walkInData, phone: e.target.value })}
                                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
                                             placeholder="+92-300-1234567"
                                         />
@@ -1970,7 +1960,7 @@ Visit Management System`;
                                         <select
                                             required
                                             value={walkInData.executiveId}
-                                            onChange={(e) => setWalkInData({...walkInData, executiveId: e.target.value})}
+                                            onChange={(e) => setWalkInData({ ...walkInData, executiveId: e.target.value })}
                                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
                                         >
                                             {EXECUTIVES.map(exec => (
@@ -1985,7 +1975,7 @@ Visit Management System`;
                                         <textarea
                                             required
                                             value={walkInData.purpose}
-                                            onChange={(e) => setWalkInData({...walkInData, purpose: e.target.value})}
+                                            onChange={(e) => setWalkInData({ ...walkInData, purpose: e.target.value })}
                                             rows={3}
                                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
                                             placeholder="Purpose of visit"
@@ -2028,13 +2018,12 @@ Visit Management System`;
                                                         </p>
                                                         <p className="text-xs text-gray-500 mt-1">Code: {visit.code}</p>
                                                     </div>
-                                                    <span className={`px-3 py-1 text-xs font-medium rounded-full ${
-                                                        visit.status === 'checked_in' ? 'bg-green-100 text-green-800' :
-                                                        visit.approval === 'approved' ? 'bg-blue-100 text-blue-800' :
-                                                        'bg-yellow-100 text-yellow-800'
-                                                    }`}>
+                                                    <span className={`px-3 py-1 text-xs font-medium rounded-full ${visit.status === 'checked_in' ? 'bg-green-100 text-green-800' :
+                                                            visit.approval === 'approved' ? 'bg-blue-100 text-blue-800' :
+                                                                'bg-yellow-100 text-yellow-800'
+                                                        }`}>
                                                         {visit.status === 'checked_in' ? 'CHECKED IN' :
-                                                         visit.approval === 'approved' ? 'APPROVED' : 'PENDING'}
+                                                            visit.approval === 'approved' ? 'APPROVED' : 'PENDING'}
                                                     </span>
                                                 </div>
                                             </div>
@@ -2134,7 +2123,7 @@ Visit Management System`;
             };
 
             const toggleUserStatus = (userId) => {
-                const updatedUsers = users.map(user => 
+                const updatedUsers = users.map(user =>
                     user.id === userId ? { ...user, active: !user.active } : user
                 );
                 setUsers(updatedUsers);
@@ -2190,11 +2179,10 @@ Visit Management System`;
                                     <button
                                         key={tab.id}
                                         onClick={() => setActiveTab(tab.id)}
-                                        className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                                            activeTab === tab.id
+                                        className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === tab.id
                                                 ? 'border-indigo-500 text-indigo-600'
                                                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                                        }`}
+                                            }`}
                                     >
                                         <span className="mr-2">{tab.icon}</span>
                                         {tab.name}
@@ -2316,19 +2304,17 @@ Visit Management System`;
                                                         <div className="text-sm text-gray-600">{user.username}</div>
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap">
-                                                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                                                            user.role === 'admin' ? 'bg-red-100 text-red-800' :
-                                                            user.role === 'guard' ? 'bg-blue-100 text-blue-800' :
-                                                            user.role === 'staff' ? 'bg-green-100 text-green-800' :
-                                                            'bg-gray-100 text-gray-800'
-                                                        }`}>
+                                                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${user.role === 'admin' ? 'bg-red-100 text-red-800' :
+                                                                user.role === 'guard' ? 'bg-blue-100 text-blue-800' :
+                                                                    user.role === 'staff' ? 'bg-green-100 text-green-800' :
+                                                                        'bg-gray-100 text-gray-800'
+                                                            }`}>
                                                             {user.role.toUpperCase()}
                                                         </span>
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap">
-                                                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                                                            user.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                                                        }`}>
+                                                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${user.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                                            }`}>
                                                             {user.active ? 'Active' : 'Inactive'}
                                                         </span>
                                                     </td>
@@ -2338,11 +2324,10 @@ Visit Management System`;
                                                     <td className="px-6 py-4 whitespace-nowrap">
                                                         <button
                                                             onClick={() => toggleUserStatus(user.id)}
-                                                            className={`px-3 py-1 text-xs font-medium rounded ${
-                                                                user.active 
-                                                                    ? 'bg-red-100 text-red-800 hover:bg-red-200' 
+                                                            className={`px-3 py-1 text-xs font-medium rounded ${user.active
+                                                                    ? 'bg-red-100 text-red-800 hover:bg-red-200'
                                                                     : 'bg-green-100 text-green-800 hover:bg-green-200'
-                                                            }`}
+                                                                }`}
                                                         >
                                                             {user.active ? 'Deactivate' : 'Activate'}
                                                         </button>
@@ -2460,16 +2445,14 @@ Visit Management System`;
                                                         </div>
                                                     </div>
                                                     <div className="flex space-x-2">
-                                                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                                                            visit.type === 'walk_in' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
-                                                        }`}>
+                                                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${visit.type === 'walk_in' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
+                                                            }`}>
                                                             {visit.type === 'walk_in' ? 'Walk-in' : 'Scheduled'}
                                                         </span>
-                                                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                                                            visit.approval === 'approved' ? 'bg-green-100 text-green-800' :
-                                                            visit.approval === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                                                            'bg-red-100 text-red-800'
-                                                        }`}>
+                                                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${visit.approval === 'approved' ? 'bg-green-100 text-green-800' :
+                                                                visit.approval === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                                                    'bg-red-100 text-red-800'
+                                                            }`}>
                                                             {visit.approval}
                                                         </span>
                                                     </div>
@@ -2513,13 +2496,13 @@ Visit Management System`;
             // Set first executive as default when executives list is loaded
             useEffect(() => {
                 if (EXECUTIVES.length > 0 && !walkInData.executiveId) {
-                    setWalkInData(prev => ({...prev, executiveId: EXECUTIVES[0].id}));
+                    setWalkInData(prev => ({ ...prev, executiveId: EXECUTIVES[0].id }));
                 }
             }, [EXECUTIVES.length]);
 
             const handleWalkInSubmit = async (e) => {
                 e.preventDefault();
-                
+
                 const visit = {
                     id: Date.now(),
                     code: null, // Will be set from database
@@ -2534,13 +2517,13 @@ Visit Management System`;
                     type: 'walk_in',
                     createdAt: new Date().toISOString()
                 };
-                
+
                 try {
                     const result = await saveVisit(visit);
-                    
+
                     console.log('=== Receptionist Dashboard - After Save ===');
                     console.log('Result.visit_code:', result?.visit_code);
-                    
+
                     // Create new visit object with database-generated code
                     // API returns visit object directly with visit_code property
                     if (result && result.visit_code) {
@@ -2550,13 +2533,13 @@ Visit Management System`;
                             id: result.id
                         };
                         console.log('Receptionist - visitWithCode.code:', visitWithCode.code);
-                        
+
                         // Show digital pass preview with database code
                         setCreatedVisit(visitWithCode);
                     } else {
                         setCreatedVisit(visit);
                     }
-                    
+
                     setShowPassPreview(true);
                     setShowWalkInForm(false);
                     setWalkInData({ name: '', company: '', phone: '', executiveId: '', purpose: '' });
@@ -2569,7 +2552,7 @@ Visit Management System`;
                 const code = scanInput.trim().toUpperCase();
                 const visits = await getVisits();
                 const visit = visits.find(v => v.code.toUpperCase() === code);
-                
+
                 if (!visit) {
                     setScanResult({ valid: false, message: 'Invalid pass code' });
                     return;
@@ -2612,13 +2595,13 @@ Visit Management System`;
             return (
                 <div className="min-h-screen bg-gray-50">
                     {showPassPreview && createdVisit && (
-                        <DigitalPass 
+                        <DigitalPass
                             visit={createdVisit}
                             executive={EXECUTIVES.find(e => e.id === createdVisit.executiveId)}
                             onClose={() => setShowPassPreview(false)}
                         />
                     )}
-                    
+
                     <div className="bg-white shadow-sm border-b">
                         <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
                             <h1 className="text-2xl font-bold text-gray-900">Receptionist Dashboard</h1>
@@ -2668,12 +2651,10 @@ Visit Management System`;
                                         </button>
 
                                         {scanResult && (
-                                            <div className={`p-3 rounded-lg ${
-                                                scanResult.valid ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'
-                                            }`}>
-                                                <p className={`text-sm font-medium ${
-                                                    scanResult.valid ? 'text-green-800' : 'text-red-800'
+                                            <div className={`p-3 rounded-lg ${scanResult.valid ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'
                                                 }`}>
+                                                <p className={`text-sm font-medium ${scanResult.valid ? 'text-green-800' : 'text-red-800'
+                                                    }`}>
                                                     {scanResult.message}
                                                 </p>
                                                 {scanResult.valid && scanResult.visit && (
@@ -2719,18 +2700,16 @@ Visit Management System`;
                                                                 <p className="text-sm text-gray-600">{visit.visitor.company}</p>
                                                                 <p className="text-sm text-gray-500">{visit.purpose}</p>
                                                                 <div className="flex items-center space-x-4 mt-2">
-                                                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                                                        visit.approval === 'approved' ? 'bg-green-100 text-green-800' :
-                                                                        visit.approval === 'pending' ? 'bg-orange-100 text-orange-800' :
-                                                                        'bg-red-100 text-red-800'
-                                                                    }`}>
+                                                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${visit.approval === 'approved' ? 'bg-green-100 text-green-800' :
+                                                                            visit.approval === 'pending' ? 'bg-orange-100 text-orange-800' :
+                                                                                'bg-red-100 text-red-800'
+                                                                        }`}>
                                                                         {visit.approval === 'approved' ? 'Approved' : visit.approval === 'pending' ? 'Pending' : 'Rejected'}
                                                                     </span>
-                                                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                                                        visit.status === 'checked_in' ? 'bg-green-100 text-green-800' :
-                                                                        visit.status === 'checked_out' ? 'bg-gray-100 text-gray-800' :
-                                                                        'bg-blue-100 text-blue-800'
-                                                                    }`}>
+                                                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${visit.status === 'checked_in' ? 'bg-green-100 text-green-800' :
+                                                                            visit.status === 'checked_out' ? 'bg-gray-100 text-gray-800' :
+                                                                                'bg-blue-100 text-blue-800'
+                                                                        }`}>
                                                                         {visit.status === 'checked_in' ? 'Checked In' : visit.status === 'checked_out' ? 'Checked Out' : 'Scheduled'}
                                                                     </span>
                                                                 </div>
@@ -2762,7 +2741,7 @@ Visit Management System`;
                                             type="text"
                                             required
                                             value={walkInData.name}
-                                            onChange={(e) => setWalkInData({...walkInData, name: e.target.value})}
+                                            onChange={(e) => setWalkInData({ ...walkInData, name: e.target.value })}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                                         />
                                     </div>
@@ -2771,7 +2750,7 @@ Visit Management System`;
                                         <input
                                             type="text"
                                             value={walkInData.company}
-                                            onChange={(e) => setWalkInData({...walkInData, company: e.target.value})}
+                                            onChange={(e) => setWalkInData({ ...walkInData, company: e.target.value })}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                                         />
                                     </div>
@@ -2781,7 +2760,7 @@ Visit Management System`;
                                             type="tel"
                                             required
                                             value={walkInData.phone}
-                                            onChange={(e) => setWalkInData({...walkInData, phone: e.target.value})}
+                                            onChange={(e) => setWalkInData({ ...walkInData, phone: e.target.value })}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                                         />
                                     </div>
@@ -2790,7 +2769,7 @@ Visit Management System`;
                                         <select
                                             required
                                             value={walkInData.executiveId}
-                                            onChange={(e) => setWalkInData({...walkInData, executiveId: e.target.value})}
+                                            onChange={(e) => setWalkInData({ ...walkInData, executiveId: e.target.value })}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                                         >
                                             {EXECUTIVES.map(exec => (
@@ -2803,7 +2782,7 @@ Visit Management System`;
                                         <textarea
                                             required
                                             value={walkInData.purpose}
-                                            onChange={(e) => setWalkInData({...walkInData, purpose: e.target.value})}
+                                            onChange={(e) => setWalkInData({ ...walkInData, purpose: e.target.value })}
                                             rows={3}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                                         />
@@ -2848,11 +2827,11 @@ Visit Management System`;
                             setExecutives(data);
                             console.log('Loaded executives from database:', data.length);
                         }
-                        
+
                         // Check if user is already logged in
                         const token = sessionStorage.getItem('authToken');
                         const storedUser = sessionStorage.getItem('user');
-                        
+
                         if (token && storedUser) {
                             // Verify token is still valid
                             try {
@@ -2861,7 +2840,7 @@ Visit Management System`;
                                         'Authorization': `Bearer ${token}`
                                     }
                                 });
-                                
+
                                 if (verifyResponse.ok) {
                                     setUser(JSON.parse(storedUser));
                                 }
@@ -2935,7 +2914,7 @@ Visit Management System`;
             console.log('React app rendered successfully');
         } catch (error) {
             console.error('Failed to render app:', error);
-            document.getElementById('root').innerHTML = 
+            document.getElementById('root').innerHTML =
                 '<div style="padding: 40px; text-align: center; color: red;">' +
                 '<h1>Application Error</h1>' +
                 '<p>Failed to load the application. Please refresh the page.</p>' +
@@ -2944,4 +2923,5 @@ Visit Management System`;
         }
     </script>
 </body>
+
 </html>

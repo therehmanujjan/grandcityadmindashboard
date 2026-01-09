@@ -40,7 +40,7 @@ docker-compose.yml
 *.sh
 
 # Server files not needed for static deployment
-server.js
+# server.js
 server-prod.js
 server-shared-prod.js
 shared-server.js
