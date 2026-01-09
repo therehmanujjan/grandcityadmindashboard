@@ -9,38 +9,21 @@
     "lint": "eslint ."
   },
   "dependencies": {
-    "@prisma/client": "^5.7.0",
-    "@supabase/supabase-js": "^2.39.3",
-    "aws-sdk": "^2.1506.0",
-    "bcryptjs": "^2.4.3",
+    "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
-    "express-rate-limit": "^7.1.5",
-    "helmet": "^7.1.0",
-    "joi": "^17.11.0",
     "jsonwebtoken": "^9.0.2",
-    "multer": "^1.4.5-lts.1",
-    "nodemailer": "^6.9.7",
-    "pg": "^8.11.3",
-    "qrcode": "^1.5.3",
-    "socket.io": "^4.7.4",
-    "speakeasy": "^2.0.0",
-    "winston": "^3.11.0",
-    "zod": "^3.22.4"
+    "pg": "^8.11.3"
   },
   "devDependencies": {
-    "@types/minimatch": "^5.1.2",
     "eslint": "^8.55.0",
-    "jest": "^29.7.0",
-    "prisma": "^5.7.0"
+    "jest": "^29.7.0"
   },
   "keywords": [
     "guest-pass",
     "visitor-management",
-    "qr-code",
-    "enterprise",
-    "security"
+    "backend"
   ],
   "author": "Ali Bin Nadeem",
   "license": "MIT"
