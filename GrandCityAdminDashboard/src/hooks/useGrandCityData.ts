@@ -1,19 +1,18 @@
 'use client'
 
 import { useState, useEffect } from 'react';
-import { isDbConfigured } from '../utils/neonClient';
-import { 
-  DashboardStats, 
-  Project, 
-  Shift, 
-  Communication, 
-  PhotoLog, 
-  Task, 
-  Payment, 
-  Vendor, 
-  Report, 
-  ClientAccess, 
-  FormData 
+import {
+  DashboardStats,
+  Project,
+  Shift,
+  Communication,
+  PhotoLog,
+  Task,
+  Payment,
+  Vendor,
+  Report,
+  ClientAccess,
+  FormData
 } from '../types';
 
 export const useGrandCityData = () => {
@@ -46,11 +45,6 @@ export const useGrandCityData = () => {
   // Load all data from database on mount
   useEffect(() => {
     const loadAllData = async () => {
-      if (!isDbConfigured) {
-        console.warn('Database not configured. Using empty data.');
-        return;
-      }
-
       try {
         // Fetch all data in parallel
         const [
@@ -249,23 +243,23 @@ export const useGrandCityData = () => {
       status: 'Present',
       location: formData.location || 'HQ Office'
     };
-    
+
     try {
       const res = await fetch('/api/shifts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(shiftData)
       });
-      
+
       if (res.ok) {
         const newShift = await res.json();
         setShifts([...shifts, newShift]);
-        setStats({...stats, shiftsToday: stats.shiftsToday + 1});
+        setStats({ ...stats, shiftsToday: stats.shiftsToday + 1 });
       }
     } catch (error) {
       console.error('Failed to add shift:', error);
     }
-    
+
     setShowModal(false);
     setFormData({});
   };
@@ -275,7 +269,7 @@ export const useGrandCityData = () => {
       const res = await fetch(`/api/shifts?id=${id}`, { method: 'DELETE' });
       if (res.ok) {
         setShifts(shifts.filter(s => s.id !== id));
-        setStats({...stats, shiftsToday: stats.shiftsToday - 1});
+        setStats({ ...stats, shiftsToday: stats.shiftsToday - 1 });
       }
     } catch (error) {
       console.error('Failed to delete shift:', error);
@@ -289,9 +283,9 @@ export const useGrandCityData = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus })
       });
-      
+
       if (res.ok) {
-        setShifts(shifts.map(s => s.id === id ? {...s, status: newStatus as Shift['status']} : s));
+        setShifts(shifts.map(s => s.id === id ? { ...s, status: newStatus as Shift['status'] } : s));
       }
     } catch (error) {
       console.error('Failed to update shift status:', error);
@@ -307,23 +301,23 @@ export const useGrandCityData = () => {
       manager: formData.manager || 'Unassigned',
       team: parseInt(formData.team || '0') || 0
     };
-    
+
     try {
       const res = await fetch('/api/projects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(projectData)
       });
-      
+
       if (res.ok) {
         const newProject = await res.json();
         setProjects([...projects, newProject]);
-        setStats({...stats, activeProjects: stats.activeProjects + 1});
+        setStats({ ...stats, activeProjects: stats.activeProjects + 1 });
       }
     } catch (error) {
       console.error('Failed to add project:', error);
     }
-    
+
     setShowModal(false);
     setFormData({});
   };
@@ -331,12 +325,12 @@ export const useGrandCityData = () => {
   const handleUpdateProjectProgress = async (id: number, increment: number) => {
     const project = projects.find(p => p.id === id);
     if (!project) return;
-    
+
     const newProgress = Math.min(100, Math.max(0, project.progress + increment));
-    
+
     // Update locally first for immediate feedback
-    setProjects(projects.map(p => p.id === id ? {...p, progress: newProgress} : p));
-    
+    setProjects(projects.map(p => p.id === id ? { ...p, progress: newProgress } : p));
+
     // Then sync to database (would need a PATCH endpoint in projects route)
     try {
       await fetch(`/api/projects?id=${id}`, {
@@ -354,7 +348,7 @@ export const useGrandCityData = () => {
       const res = await fetch(`/api/projects?id=${id}`, { method: 'DELETE' });
       if (res.ok) {
         setProjects(projects.filter(p => p.id !== id));
-        setStats({...stats, activeProjects: stats.activeProjects - 1});
+        setStats({ ...stats, activeProjects: stats.activeProjects - 1 });
       }
     } catch (error) {
       console.error('Failed to delete project:', error);
@@ -368,14 +362,14 @@ export const useGrandCityData = () => {
       message: formData.message || 'New message',
       time: 'Just now'
     };
-    
+
     try {
       const res = await fetch('/api/communications', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(commData)
       });
-      
+
       if (res.ok) {
         const newComm = await res.json();
         setCommunications([{
@@ -390,7 +384,7 @@ export const useGrandCityData = () => {
     } catch (error) {
       console.error('Failed to add communication:', error);
     }
-    
+
     setShowModal(false);
     setFormData({});
   };
@@ -399,7 +393,7 @@ export const useGrandCityData = () => {
     try {
       const res = await fetch(`/api/communications?id=${id}`, { method: 'PATCH' });
       if (res.ok) {
-        setCommunications(communications.map(c => c.id === id ? {...c, unread: 0} : c));
+        setCommunications(communications.map(c => c.id === id ? { ...c, unread: 0 } : c));
       }
     } catch (error) {
       console.error('Failed to mark as read:', error);
@@ -415,14 +409,14 @@ export const useGrandCityData = () => {
       time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
       tags: formData.tags ? formData.tags.split(',').map(t => t.trim()) : ['general']
     };
-    
+
     try {
       const res = await fetch('/api/photo-logs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(photoData)
       });
-      
+
       if (res.ok) {
         const newLog = await res.json();
         setPhotoLogs([{
@@ -434,12 +428,12 @@ export const useGrandCityData = () => {
           time: newLog.time,
           tags: newLog.tags || []
         }, ...photoLogs]);
-        setStats({...stats, dailyPhotoUploads: stats.dailyPhotoUploads + photoData.photos});
+        setStats({ ...stats, dailyPhotoUploads: stats.dailyPhotoUploads + photoData.photos });
       }
     } catch (error) {
       console.error('Failed to add photo log:', error);
     }
-    
+
     setShowModal(false);
     setFormData({});
   };
@@ -449,7 +443,7 @@ export const useGrandCityData = () => {
       alert('Please fill in title, assignee, project, priority, and due date.');
       return;
     }
-    
+
     const taskData = {
       title: formData.title,
       assignee: formData.assignee,
@@ -459,23 +453,23 @@ export const useGrandCityData = () => {
       status: 'Pending',
       completion: 0
     };
-    
+
     try {
       const res = await fetch('/api/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(taskData)
       });
-      
+
       if (res.ok) {
         const newTask = await res.json();
         setTasks([...tasks, newTask]);
-        setStats({...stats, pendingTasks: stats.pendingTasks + 1});
+        setStats({ ...stats, pendingTasks: stats.pendingTasks + 1 });
       }
     } catch (error) {
       console.error('Failed to add task:', error);
     }
-    
+
     setShowModal(false);
     setFormData({});
   };
@@ -484,9 +478,9 @@ export const useGrandCityData = () => {
     let newStatus: Task['status'] = 'Pending';
     if (newCompletion === 100) newStatus = 'Completed';
     else if (newCompletion > 0) newStatus = 'In Progress';
-    
-    setTasks(tasks.map(t => t.id === id ? {...t, completion: newCompletion, status: newStatus} : t));
-    
+
+    setTasks(tasks.map(t => t.id === id ? { ...t, completion: newCompletion, status: newStatus } : t));
+
     try {
       await fetch(`/api/tasks?id=${id}`, {
         method: 'PATCH',
@@ -500,15 +494,15 @@ export const useGrandCityData = () => {
 
   const handleDeleteTask = async (id: number) => {
     if (!confirm('Delete this task? This action cannot be undone.')) return;
-    
+
     const task = tasks.find(t => t.id === id);
-    
+
     try {
       const res = await fetch(`/api/tasks?id=${id}`, { method: 'DELETE' });
       if (res.ok) {
         setTasks(tasks.filter(t => t.id !== id));
         if (task && task.status !== 'Completed') {
-          setStats({...stats, pendingTasks: stats.pendingTasks - 1});
+          setStats({ ...stats, pendingTasks: stats.pendingTasks - 1 });
         }
       }
     } catch (error) {
@@ -521,7 +515,7 @@ export const useGrandCityData = () => {
       alert('Please fill in vendor, amount, type, project, and due date.');
       return;
     }
-    
+
     const paymentData = {
       vendor: formData.vendor,
       amount: parseInt(formData.amount || '0') || 0,
@@ -530,23 +524,23 @@ export const useGrandCityData = () => {
       status: 'Pending',
       project: formData.project
     };
-    
+
     try {
       const res = await fetch('/api/payments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(paymentData)
       });
-      
+
       if (res.ok) {
         const newPayment = await res.json();
         setPayments([...payments, newPayment]);
-        setStats({...stats, pendingPayments: stats.pendingPayments + 1});
+        setStats({ ...stats, pendingPayments: stats.pendingPayments + 1 });
       }
     } catch (error) {
       console.error('Failed to add payment:', error);
     }
-    
+
     setShowModal(false);
     setFormData({});
   };
@@ -558,10 +552,10 @@ export const useGrandCityData = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'Processed' })
       });
-      
+
       if (res.ok) {
-        setPayments(payments.map(p => p.id === id ? {...p, status: 'Processed'} : p));
-        setStats({...stats, pendingPayments: stats.pendingPayments - 1});
+        setPayments(payments.map(p => p.id === id ? { ...p, status: 'Processed' } : p));
+        setStats({ ...stats, pendingPayments: stats.pendingPayments - 1 });
       }
     } catch (error) {
       console.error('Failed to process payment:', error);
@@ -575,9 +569,9 @@ export const useGrandCityData = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'Approved' })
       });
-      
+
       if (res.ok) {
-        setPayments(payments.map(p => p.id === id ? {...p, status: 'Approved'} : p));
+        setPayments(payments.map(p => p.id === id ? { ...p, status: 'Approved' } : p));
       }
     } catch (error) {
       console.error('Failed to approve payment:', error);
@@ -586,9 +580,9 @@ export const useGrandCityData = () => {
 
   const handleDeletePayment = async (id: number) => {
     if (!confirm('Remove this payment? This action cannot be undone.')) return;
-    
+
     const payment = payments.find(p => p.id === id);
-    
+
     try {
       const res = await fetch(`/api/payments?id=${id}`, { method: 'DELETE' });
       if (res.ok) {
@@ -609,7 +603,7 @@ export const useGrandCityData = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'Audit Requested' })
       });
-      
+
       if (res.ok) {
         setPayments(payments.map(p => p.id === id ? { ...p, status: 'Audit Requested' } : p));
       }
@@ -625,7 +619,7 @@ export const useGrandCityData = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'Amendment Requested' })
       });
-      
+
       if (res.ok) {
         setPayments(payments.map(p => p.id === id ? { ...p, status: 'Amendment Requested' } : p));
       }
@@ -639,7 +633,7 @@ export const useGrandCityData = () => {
       alert('Please provide vendor name and category.');
       return;
     }
-    
+
     const vendorData = {
       name: formData.vendorName,
       category: formData.category,
@@ -649,14 +643,14 @@ export const useGrandCityData = () => {
       projects: formData.projects ? formData.projects.split(',').map(p => p.trim()) : [],
       performance: 85
     };
-    
+
     try {
       const res = await fetch('/api/vendors', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(vendorData)
       });
-      
+
       if (res.ok) {
         const newVendor = await res.json();
         setVendors([...vendors, {
@@ -669,24 +663,24 @@ export const useGrandCityData = () => {
           projects: newVendor.projects,
           performance: newVendor.performance
         }]);
-        setStats({...stats, activeVendors: stats.activeVendors + 1});
+        setStats({ ...stats, activeVendors: stats.activeVendors + 1 });
       }
     } catch (error) {
       console.error('Failed to add vendor:', error);
     }
-    
+
     setShowModal(false);
     setFormData({});
   };
 
   const handleDeleteVendor = async (id: number) => {
     if (!confirm('Remove this vendor? This action cannot be undone.')) return;
-    
+
     try {
       const res = await fetch(`/api/vendors?id=${id}`, { method: 'DELETE' });
       if (res.ok) {
         setVendors(vendors.filter(v => v.id !== id));
-        setStats({...stats, activeVendors: stats.activeVendors - 1});
+        setStats({ ...stats, activeVendors: stats.activeVendors - 1 });
       }
     } catch (error) {
       console.error('Failed to delete vendor:', error);
@@ -696,7 +690,7 @@ export const useGrandCityData = () => {
   const handleUpdateVendorPerformance = async (id: number, newPerformance: number) => {
     const clamped = Math.max(0, Math.min(100, Math.round(newPerformance)));
     setVendors(prev => prev.map(v => v.id === id ? { ...v, performance: clamped } : v));
-    
+
     // Note: Would need a PATCH endpoint for vendors to update performance
     try {
       await fetch(`/api/vendors?id=${id}`, {
@@ -715,7 +709,7 @@ export const useGrandCityData = () => {
 
   const handleUpdateTaskPriority = async (id: number, newPriority: Task['priority']) => {
     setTasks(prev => prev.map(t => t.id === id ? { ...t, priority: newPriority } : t));
-    
+
     try {
       await fetch(`/api/tasks?id=${id}`, {
         method: 'PATCH',
@@ -785,14 +779,14 @@ export const useGrandCityData = () => {
       status: 'Generated',
       downloads: 0
     };
-    
+
     try {
       const res = await fetch('/api/reports', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(reportData)
       });
-      
+
       if (res.ok) {
         const newReport = await res.json();
         setReports([newReport, ...reports]);
@@ -800,7 +794,7 @@ export const useGrandCityData = () => {
     } catch (error) {
       console.error('Failed to generate report:', error);
     }
-    
+
     setShowModal(false);
     setFormData({});
   };
@@ -810,7 +804,7 @@ export const useGrandCityData = () => {
     const newDownloads = currentDownloads + 1;
     setReports(reports.map(r => r.id === id ? { ...r, downloads: newDownloads } : r));
     alert(`Downloading report in ${format} format...`);
-    
+
     try {
       await fetch(`/api/reports?id=${id}`, { method: 'PATCH' });
     } catch (error) {
@@ -826,7 +820,7 @@ export const useGrandCityData = () => {
       text: text.trim(),
       time: new Date().toLocaleString()
     };
-    setPhotoLogs(prev => prev.map(l => l.id === logId ? { ...l, comments: [ ...(l.comments || []), comment ] } : l));
+    setPhotoLogs(prev => prev.map(l => l.id === logId ? { ...l, comments: [...(l.comments || []), comment] } : l));
   };
 
   const handleConfirmReceiptPayment = async (id: number) => {
@@ -836,10 +830,10 @@ export const useGrandCityData = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'Confirmed' })
       });
-      
+
       if (res.ok) {
         setPayments(payments.map(p => p.id === id ? { ...p, status: 'Confirmed' } : p));
-        setStats({...stats, pendingPayments: Math.max(0, stats.pendingPayments - 1)});
+        setStats({ ...stats, pendingPayments: Math.max(0, stats.pendingPayments - 1) });
       }
     } catch (error) {
       console.error('Failed to confirm receipt:', error);
@@ -867,7 +861,7 @@ export const useGrandCityData = () => {
     searchTerm,
     selectedDate,
     selectedProject,
-    
+
     // Setters
     setStats,
     setProjects,
@@ -888,7 +882,7 @@ export const useGrandCityData = () => {
     setSearchTerm,
     setSelectedDate,
     setSelectedProject,
-    
+
     // Handlers
     handleAddShift,
     handleDeleteShift,
