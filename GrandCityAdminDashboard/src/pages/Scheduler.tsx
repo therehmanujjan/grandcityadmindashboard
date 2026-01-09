@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Modal } from '@/components/Modal';
 import {
   Property,
@@ -32,19 +32,71 @@ export default function Scheduler() {
   });
 
   const [propertyForm, setPropertyForm] = useState({ name: '', location: '', description: '' });
-  const [vendorForm, setVendorForm] = useState({ 
-    name: '', 
-    category: '', 
-    rating: 0, 
+  const [vendorForm, setVendorForm] = useState({
+    name: '',
+    category: '',
+    rating: 0,
     active_contracts: 0,
-    performance: 0 
+    performance: 0
   });
 
-  useEffect(() => {
-    fetchAllData();
+  const fetchProperties = useCallback(async () => {
+    try {
+      const res = await fetch('/api/properties');
+      if (res.ok) {
+        const data = await res.json();
+        setProperties(data);
+      }
+    } catch (error) {
+      console.error('Error fetching properties:', error);
+    }
   }, []);
 
-  const fetchAllData = async () => {
+  const fetchMaintenances = useCallback(async () => {
+    try {
+      const params = new URLSearchParams();
+      if (filter.status !== 'all') params.append('status', filter.status);
+      if (filter.propertyId) params.append('propertyId', filter.propertyId.toString());
+
+      const res = await fetch(`/api/maintenance-schedules?${params}`);
+      if (res.ok) {
+        const data = await res.json();
+        setMaintenances(data);
+      }
+    } catch (error) {
+      console.error('Error fetching maintenances:', error);
+    }
+  }, [filter]);
+
+  const fetchVendors = useCallback(async () => {
+    try {
+      const res = await fetch('/api/vendors');
+      if (res.ok) {
+        const data = await res.json();
+        setVendors(data.filter((v: Vendor) =>
+          ['Electrical', 'Car Maintenance', 'IT Support', 'Maintenance'].includes(v.category)
+        ));
+      }
+    } catch (error) {
+      console.error('Error fetching vendors:', error);
+    }
+  }, []);
+
+  const fetchPersonnel = useCallback(async () => {
+    try {
+      const res = await fetch('/api/users');
+      if (res.ok) {
+        const data = await res.json();
+        setPersonnel(data.filter((u: User) =>
+          ['Electrician', 'Car Maintenance', 'IT Support', 'HR', 'Maintenance'].includes(u.role)
+        ));
+      }
+    } catch (error) {
+      console.error('Error fetching personnel:', error);
+    }
+  }, []);
+
+  const fetchAllData = useCallback(async () => {
     setLoading(true);
     try {
       await Promise.all([
@@ -58,63 +110,11 @@ export default function Scheduler() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [fetchProperties, fetchMaintenances, fetchVendors, fetchPersonnel]);
 
-  const fetchProperties = async () => {
-    try {
-      const res = await fetch('/api/properties');
-      if (res.ok) {
-        const data = await res.json();
-        setProperties(data);
-      }
-    } catch (error) {
-      console.error('Error fetching properties:', error);
-    }
-  };
-
-  const fetchMaintenances = async () => {
-    try {
-      const params = new URLSearchParams();
-      if (filter.status !== 'all') params.append('status', filter.status);
-      if (filter.propertyId) params.append('propertyId', filter.propertyId.toString());
-      
-      const res = await fetch(`/api/maintenance-schedules?${params}`);
-      if (res.ok) {
-        const data = await res.json();
-        setMaintenances(data);
-      }
-    } catch (error) {
-      console.error('Error fetching maintenances:', error);
-    }
-  };
-
-  const fetchVendors = async () => {
-    try {
-      const res = await fetch('/api/vendors');
-      if (res.ok) {
-        const data = await res.json();
-        setVendors(data.filter((v: Vendor) => 
-          ['Electrical', 'Car Maintenance', 'IT Support', 'Maintenance'].includes(v.category)
-        ));
-      }
-    } catch (error) {
-      console.error('Error fetching vendors:', error);
-    }
-  };
-
-  const fetchPersonnel = async () => {
-    try {
-      const res = await fetch('/api/users');
-      if (res.ok) {
-        const data = await res.json();
-        setPersonnel(data.filter((u: User) => 
-          ['Electrician', 'Car Maintenance', 'IT Support', 'HR', 'Maintenance'].includes(u.role)
-        ));
-      }
-    } catch (error) {
-      console.error('Error fetching personnel:', error);
-    }
-  };
+  useEffect(() => {
+    fetchAllData();
+  }, [fetchAllData]);
 
   const handleAddMaintenance = async () => {
     if (!formData.property_id || !formData.date || !formData.type || !formData.requested_time) {
@@ -259,7 +259,7 @@ export default function Scheduler() {
 
     const key = isHR ? `hr_${personnelId}` : personnelId.toString();
     const person = personnel.find(p => p.id === personnelId);
-    
+
     const updatedAcknowledgments = {
       ...maintenance.acknowledgments,
       [key]: {
@@ -288,7 +288,7 @@ export default function Scheduler() {
 
   useEffect(() => {
     fetchMaintenances();
-  }, [filter]);
+  }, [filter, fetchMaintenances]);
 
   const renderCalendar = () => {
     const year = currentDate.getFullYear();
@@ -313,22 +313,21 @@ export default function Scheduler() {
     for (let i = 1; i <= lastDay.getDate(); i++) {
       const dateObj = new Date(year, month, i);
       const isToday = dateObj.toDateString() === today.toDateString();
-      
+
       const dayMaintenances = maintenances.filter(m => {
         const mDate = new Date(m.date);
-        return mDate.getDate() === i && 
-               mDate.getMonth() === month && 
-               mDate.getFullYear() === year &&
-               (filter.status === 'all' || m.status === filter.status) &&
-               (!filter.propertyId || m.property_id === filter.propertyId);
+        return mDate.getDate() === i &&
+          mDate.getMonth() === month &&
+          mDate.getFullYear() === year &&
+          (filter.status === 'all' || m.status === filter.status) &&
+          (!filter.propertyId || m.property_id === filter.propertyId);
       });
 
       days.push(
         <div
           key={i}
-          className={`min-h-20 p-2 border border-gray-200 cursor-pointer transition-all hover:border-blue-500 hover:shadow-md ${
-            isToday ? 'bg-blue-500 text-white' : 'bg-white'
-          }`}
+          className={`min-h-20 p-2 border border-gray-200 cursor-pointer transition-all hover:border-blue-500 hover:shadow-md ${isToday ? 'bg-blue-500 text-white' : 'bg-white'
+            }`}
           onClick={() => {
             setFormData({ ...formData, date: dateObj.toISOString().split('T')[0] });
             setActiveTab('maintenance');
@@ -339,10 +338,9 @@ export default function Scheduler() {
             {dayMaintenances.map(m => (
               <div
                 key={m.id}
-                className={`w-2 h-2 rounded-full ${
-                  m.status === 'pending' ? 'bg-red-500' :
+                className={`w-2 h-2 rounded-full ${m.status === 'pending' ? 'bg-red-500' :
                   m.status === 'ongoing' ? 'bg-orange-500' : 'bg-green-500'
-                }`}
+                  }`}
                 title={`${m.type} - ${m.status}`}
               />
             ))}
@@ -373,8 +371,8 @@ export default function Scheduler() {
         const mDate = new Date(m.date);
         mDate.setHours(0, 0, 0, 0);
         return mDate >= today &&
-               (filter.status === 'all' || m.status === filter.status) &&
-               (!filter.propertyId || m.property_id === filter.propertyId);
+          (filter.status === 'all' || m.status === filter.status) &&
+          (!filter.propertyId || m.property_id === filter.propertyId);
       })
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
       .slice(0, 10);
@@ -398,11 +396,10 @@ export default function Scheduler() {
           📅 {new Date(m.date).toLocaleDateString()} at {m.requested_time}
         </div>
         <div className="text-sm text-gray-600">👤 {m.vendor_name}</div>
-        <span className={`inline-block mt-2 px-2 py-1 text-xs rounded ${
-          m.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+        <span className={`inline-block mt-2 px-2 py-1 text-xs rounded ${m.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
           m.status === 'ongoing' ? 'bg-orange-100 text-orange-800' :
-          'bg-green-100 text-green-800'
-        }`}>
+            'bg-green-100 text-green-800'
+          }`}>
           {m.status.toUpperCase()}
         </span>
       </div>
@@ -425,11 +422,10 @@ export default function Scheduler() {
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`py-4 px-3 border-b-2 font-medium text-sm transition-colors ${
-                  activeTab === tab
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
+                className={`py-4 px-3 border-b-2 font-medium text-sm transition-colors ${activeTab === tab
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
               >
                 {tab === 'maintenance' && '📅 Maintenance'}
                 {tab === 'properties' && '🏢 Properties'}
@@ -484,7 +480,7 @@ export default function Scheduler() {
                 {/* Schedule Form */}
                 <div className="border border-gray-200 rounded-lg p-4">
                   <h3 className="font-semibold text-lg mb-4">📋 Schedule Maintenance</h3>
-                  
+
                   <div className="space-y-3">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Property</label>
@@ -594,11 +590,10 @@ export default function Scheduler() {
                       <button
                         key={status}
                         onClick={() => setFilter({ ...filter, status })}
-                        className={`px-3 py-1 rounded text-sm ${
-                          filter.status === status
-                            ? 'bg-blue-500 text-white'
-                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                        }`}
+                        className={`px-3 py-1 rounded text-sm ${filter.status === status
+                          ? 'bg-blue-500 text-white'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                          }`}
                       >
                         {status.charAt(0).toUpperCase() + status.slice(1)}
                       </button>
@@ -616,11 +611,10 @@ export default function Scheduler() {
                         <div
                           key={p.id}
                           onClick={() => setFilter({ ...filter, propertyId: filter.propertyId === p.id ? undefined : p.id })}
-                          className={`p-2 rounded cursor-pointer transition-colors ${
-                            filter.propertyId === p.id
-                              ? 'bg-blue-500 text-white'
-                              : 'bg-gray-100 hover:bg-gray-200'
-                          }`}
+                          className={`p-2 rounded cursor-pointer transition-colors ${filter.propertyId === p.id
+                            ? 'bg-blue-500 text-white'
+                            : 'bg-gray-100 hover:bg-gray-200'
+                            }`}
                         >
                           {p.name} <span className="opacity-70">({count})</span>
                         </div>
@@ -727,9 +721,8 @@ export default function Scheduler() {
                     <div className="text-sm text-gray-600">Role: {p.role}</div>
                     <div className="text-sm text-gray-600">Email: {p.email}</div>
                     <div className="text-sm text-gray-600">Location: {p.location}</div>
-                    <span className={`inline-block mt-2 px-2 py-1 text-xs rounded ${
-                      p.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                    }`}>
+                    <span className={`inline-block mt-2 px-2 py-1 text-xs rounded ${p.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                      }`}>
                       {p.status}
                     </span>
                   </div>
@@ -851,11 +844,11 @@ export default function Scheduler() {
             <div>
               <h2 className="text-xl font-semibold mb-4">✅ Maintenance Acknowledgments</h2>
               <p className="text-gray-600 mb-6">Track acknowledgment of maintenance schedules by personnel and HR</p>
-              
+
               <div className="space-y-4">
                 {maintenances.filter(m => m.status !== 'completed').map(m => {
                   const hrPersonnel = personnel.filter(p => p.role === 'HR');
-                  
+
                   return (
                     <div key={m.id} className="border border-gray-200 rounded-lg p-4">
                       <div className="flex justify-between items-start mb-4">
@@ -866,11 +859,10 @@ export default function Scheduler() {
                             📅 {new Date(m.date).toLocaleDateString()} at {m.requested_time}
                           </div>
                         </div>
-                        <span className={`px-2 py-1 text-xs rounded ${
-                          m.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                        <span className={`px-2 py-1 text-xs rounded ${m.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                           m.status === 'ongoing' ? 'bg-orange-100 text-orange-800' :
-                          'bg-green-100 text-green-800'
-                        }`}>
+                            'bg-green-100 text-green-800'
+                          }`}>
                           {m.status.toUpperCase()}
                         </span>
                       </div>
@@ -884,9 +876,8 @@ export default function Scheduler() {
                             const key = `hr_${person.id}`;
                             const ack = m.acknowledgments?.[key];
                             return (
-                              <div key={person.id} className={`flex justify-between items-center p-2 rounded mb-2 ${
-                                ack?.acknowledged ? 'bg-green-50 border-l-4 border-green-500' : 'bg-white border-l-4 border-gray-300'
-                              }`}>
+                              <div key={person.id} className={`flex justify-between items-center p-2 rounded mb-2 ${ack?.acknowledged ? 'bg-green-50 border-l-4 border-green-500' : 'bg-white border-l-4 border-gray-300'
+                                }`}>
                                 <span className="font-semibold">{person.name}</span>
                                 {ack?.acknowledged ? (
                                   <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
@@ -908,7 +899,7 @@ export default function Scheduler() {
                     </div>
                   );
                 })}
-                
+
                 {maintenances.filter(m => m.status !== 'completed').length === 0 && (
                   <div className="text-center text-gray-500 py-8">
                     ✅ All maintenance tasks are completed!
@@ -921,7 +912,7 @@ export default function Scheduler() {
           {activeTab === 'reports' && (
             <div>
               <h2 className="text-xl font-semibold mb-6">📊 Reports & Analytics</h2>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
                   <div className="text-2xl font-bold text-blue-600">{maintenances.length}</div>
@@ -968,11 +959,10 @@ export default function Scheduler() {
                           <td className="px-4 py-3 text-sm">{m.type}</td>
                           <td className="px-4 py-3 text-sm">{m.vendor_name}</td>
                           <td className="px-4 py-3">
-                            <span className={`px-2 py-1 text-xs rounded ${
-                              m.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                            <span className={`px-2 py-1 text-xs rounded ${m.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                               m.status === 'ongoing' ? 'bg-orange-100 text-orange-800' :
-                              'bg-green-100 text-green-800'
-                            }`}>
+                                'bg-green-100 text-green-800'
+                              }`}>
                               {m.status.toUpperCase()}
                             </span>
                           </td>
@@ -992,7 +982,7 @@ export default function Scheduler() {
         <Modal title="Maintenance Details" onClose={() => setIsModalOpen(false)}>
           <div className="p-6">
             <h2 className="text-2xl font-bold mb-4">Maintenance Details</h2>
-            
+
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div className="bg-gray-50 p-3 rounded border-l-4 border-blue-500">
                 <div className="text-sm text-gray-600">Property</div>
@@ -1013,9 +1003,8 @@ export default function Scheduler() {
               <div className="bg-gray-50 p-3 rounded border-l-4 border-blue-500">
                 <div className="text-sm text-gray-600">Priority</div>
                 <div className="font-semibold">
-                  <span className={`px-2 py-1 rounded text-xs ${
-                    selectedMaintenance.priority === 'Urgent' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'
-                  }`}>
+                  <span className={`px-2 py-1 rounded text-xs ${selectedMaintenance.priority === 'Urgent' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'
+                    }`}>
                     {selectedMaintenance.priority}
                   </span>
                 </div>
@@ -1023,11 +1012,10 @@ export default function Scheduler() {
               <div className="bg-gray-50 p-3 rounded border-l-4 border-blue-500">
                 <div className="text-sm text-gray-600">Status</div>
                 <div className="font-semibold">
-                  <span className={`px-2 py-1 rounded text-xs ${
-                    selectedMaintenance.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                  <span className={`px-2 py-1 rounded text-xs ${selectedMaintenance.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                     selectedMaintenance.status === 'ongoing' ? 'bg-orange-100 text-orange-800' :
-                    'bg-green-100 text-green-800'
-                  }`}>
+                      'bg-green-100 text-green-800'
+                    }`}>
                     {selectedMaintenance.status.toUpperCase()}
                   </span>
                 </div>
@@ -1090,7 +1078,7 @@ export default function Scheduler() {
           <div className="p-6">
             <h2 className="text-2xl font-bold mb-4">⚠️ Delete Confirmation</h2>
             <p className="text-gray-600 mb-4">This action requires admin authentication. Please enter the admin password to proceed.</p>
-            
+
             <div className="bg-yellow-50 border border-yellow-200 rounded p-4 mb-4">
               <h4 className="font-semibold text-yellow-900 mb-2">🔒 Admin Password</h4>
               <input
