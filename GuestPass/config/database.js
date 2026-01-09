@@ -23,6 +23,16 @@ pool.on('error', (err) => {
 });
 
 module.exports = {
-  query: (text, params) => pool.query(text, params),
+  // Wrap query to ensure search_path is set for every request
+  // This is necessary because transaction pooling doesn't support session-level search_path
+  query: async (text, params) => {
+    const client = await pool.connect();
+    try {
+      await client.query('SET search_path TO guestpass');
+      return await client.query(text, params);
+    } finally {
+      client.release();
+    }
+  },
   pool
 };
