@@ -12,8 +12,10 @@ const pool = new Pool({
   connectionTimeoutMillis: 10000, // Return error after 10 seconds if connection not available
 });
 
-// Test connection on startup
-pool.on('connect', () => {
+// Test connection on startup and set search path
+pool.on('connect', (client) => {
+  client.query('SET search_path TO guestpass, public')
+    .catch(err => console.error('Error setting search path', err));
   console.log('✓ Connected to Neon PostgreSQL database');
 });
 
