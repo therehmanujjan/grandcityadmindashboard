@@ -197,12 +197,38 @@ app.get('/api/executives', async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('executives')
-      .select('*')
-      .eq('is_active', true)
-      .order('name', { ascending: true });
+      .select(`
+        id,
+        position,
+        office_location,
+        users!inner (
+          full_name,
+          email,
+          department
+        )
+      `)
+      .eq('is_active', true);
+      // Note: Ordering by relation column in Supabase JS client can be tricky, 
+      // so we'll sort in memory or try the specific syntax if needed.
+      // .order('users(full_name)', { ascending: true }); 
+      // Simplifying to fetch first then map.
 
     if (error) throw error;
-    res.json(data);
+
+    // Transform the data to match expected format
+    const formattedData = data.map(exec => ({
+      id: exec.id,
+      name: exec.users ? exec.users.full_name : 'Unknown',
+      position: exec.position,
+      email: exec.users ? exec.users.email : '',
+      department: exec.users ? exec.users.department : '',
+      office_location: exec.office_location
+    }));
+
+    // Sort by name
+    formattedData.sort((a, b) => a.name.localeCompare(b.name));
+
+    res.json(formattedData);
   } catch (error) {
     console.error('Error fetching executives:', error);
     res.status(500).json({ error: error.message });
@@ -407,9 +433,11 @@ app.get('/api/dashboard-stats', async (req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
-  console.log(`Guest Pass API server running on port ${PORT}`);
-  console.log(`Connected to Supabase schema: guestpass`);
-});
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Guest Pass API server running on port ${PORT}`);
+    console.log(`Connected to Supabase schema: guestpass`);
+  });
+}
 
 module.exports = app;
