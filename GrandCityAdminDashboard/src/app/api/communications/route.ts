@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import { sql } from '@/utils/neonClient';
 
+// Ensure this route is always dynamic and never cached
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 // GET /api/communications - Fetch all communications
 export async function GET() {
   try {
@@ -12,7 +16,9 @@ export async function GET() {
     }
 
     const communications = await sql`SELECT * FROM communications ORDER BY created_at DESC`;
-    return NextResponse.json(communications);
+    return NextResponse.json(communications, {
+      headers: { 'Cache-Control': 'no-store' }
+    });
   } catch (error) {
     console.error('Error fetching communications:', error);
     return NextResponse.json(

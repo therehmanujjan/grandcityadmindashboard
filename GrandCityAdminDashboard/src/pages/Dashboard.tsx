@@ -65,6 +65,7 @@ export default function Dashboard() {
     handleUpdateShiftStatus,
     handleUpdateProjectStatus,
     handleAddPhotoComment,
+    handleDeletePhotoLog,
   } = useGrandCityData();
 
   const [activeTab, setActiveTab] = useState('overview');
@@ -997,6 +998,14 @@ export default function Dashboard() {
                             Comment
                           </button>
                         </div>
+                      </div>
+                      <div className="ml-4">
+                        <button
+                          onClick={() => handleDeletePhotoLog(log.id)}
+                          className="text-red-600 hover:text-red-900 text-sm"
+                        >
+                          Delete
+                        </button>
                       </div>
                     </div>
                   </li>

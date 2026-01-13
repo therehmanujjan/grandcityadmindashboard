@@ -59,16 +59,16 @@ export const useGrandCityData = () => {
           reportsRes,
           clientAccessRes
         ] = await Promise.all([
-          fetch('/api/dashboard-stats'),
-          fetch('/api/projects'),
-          fetch('/api/shifts'),
-          fetch('/api/communications'),
-          fetch('/api/photo-logs'),
-          fetch('/api/tasks'),
-          fetch('/api/payments'),
-          fetch('/api/vendors'),
-          fetch('/api/reports'),
-          fetch('/api/client-access')
+          fetch('/api/dashboard-stats', { cache: 'no-store' }),
+          fetch('/api/projects', { cache: 'no-store' }),
+          fetch('/api/shifts', { cache: 'no-store' }),
+          fetch('/api/communications', { cache: 'no-store' }),
+          fetch('/api/photo-logs', { cache: 'no-store' }),
+          fetch('/api/tasks', { cache: 'no-store' }),
+          fetch('/api/payments', { cache: 'no-store' }),
+          fetch('/api/vendors', { cache: 'no-store' }),
+          fetch('/api/reports', { cache: 'no-store' }),
+          fetch('/api/client-access', { cache: 'no-store' })
         ]);
 
         // Parse stats
@@ -138,9 +138,10 @@ export const useGrandCityData = () => {
             project: p.project,
             location: p.location,
             photos: p.photos || 0,
-            uploadedBy: p.uploaded_by,
+            uploadedBy: p.uploadedBy || p.uploaded_by,
             time: p.time,
-            tags: p.tags || []
+            tags: p.tags || [],
+            comments: p.comments || []
           })));
         }
 
@@ -424,18 +425,21 @@ export const useGrandCityData = () => {
           project: newLog.project,
           location: newLog.location,
           photos: newLog.photos,
-          uploadedBy: newLog.uploaded_by,
+          uploadedBy: newLog.uploadedBy || newLog.uploaded_by,
           time: newLog.time,
-          tags: newLog.tags || []
+          tags: newLog.tags || [],
+          comments: []
         }, ...photoLogs]);
         setStats({ ...stats, dailyPhotoUploads: stats.dailyPhotoUploads + photoData.photos });
+        setShowModal(false);
+        setFormData({});
+      } else {
+        alert('Failed to add photo log');
       }
     } catch (error) {
       console.error('Failed to add photo log:', error);
+      alert('Error adding photo log. Please try again.');
     }
-
-    setShowModal(false);
-    setFormData({});
   };
 
   const handleAddTask = async () => {
@@ -812,15 +816,66 @@ export const useGrandCityData = () => {
     }
   };
 
-  const handleAddPhotoComment = (logId: number, text: string, user: string = 'Admin') => {
+  const handleAddPhotoComment = async (logId: number, text: string, user: string = 'Admin') => {
     if (!text.trim()) return;
-    const comment = {
-      id: Date.now(),
-      user,
-      text: text.trim(),
-      time: new Date().toLocaleString()
-    };
-    setPhotoLogs(prev => prev.map(l => l.id === logId ? { ...l, comments: [...(l.comments || []), comment] } : l));
+    
+    try {
+      const res = await fetch('/api/photo-comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          photo_log_id: logId,
+          user_name: user,
+          text: text.trim()
+        })
+      });
+
+      if (res.ok) {
+        const newComment = await res.json();
+        setPhotoLogs(prev => prev.map(l => 
+          l.id === logId 
+            ? { ...l, comments: [...(l.comments || []), newComment] } 
+            : l
+        ));
+      } else {
+        console.error('Failed to add comment');
+      }
+    } catch (error) {
+      console.error('Error adding comment:', error);
+      // Fallback to local state update
+      const comment = {
+        id: Date.now(),
+        user,
+        text: text.trim(),
+        time: new Date().toLocaleString()
+      };
+      setPhotoLogs(prev => prev.map(l => l.id === logId ? { ...l, comments: [...(l.comments || []), comment] } : l));
+    }
+  };
+
+  const handleDeletePhotoLog = async (id: number) => {
+    if (!confirm('Are you sure you want to delete this photo log?')) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/photo-logs?id=${id}`, {
+        method: 'DELETE'
+      });
+
+      if (res.ok) {
+        const deletedLog = photoLogs.find(p => p.id === id);
+        setPhotoLogs(prev => prev.filter(p => p.id !== id));
+        if (deletedLog) {
+          setStats({ ...stats, dailyPhotoUploads: Math.max(0, stats.dailyPhotoUploads - deletedLog.photos) });
+        }
+      } else {
+        alert('Failed to delete photo log');
+      }
+    } catch (error) {
+      console.error('Failed to delete photo log:', error);
+      alert('Error deleting photo log');
+    }
   };
 
   const handleConfirmReceiptPayment = async (id: number) => {
@@ -893,6 +948,7 @@ export const useGrandCityData = () => {
     handleAddCommunication,
     handleMarkAsRead,
     handleAddPhotoLog,
+    handleDeletePhotoLog,
     handleAddTask,
     handleUpdateTaskCompletion,
     handleDeleteTask,

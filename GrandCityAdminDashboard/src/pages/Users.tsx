@@ -1,18 +1,28 @@
 'use client'
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useGrandCityData } from '../hooks/useGrandCityData';
+
+interface User {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  status: string;
+  location: string;
+  shift: string;
+  lastLogin: string | null;
+}
 
 export default function Users() {
-  const { shifts, projects, setShifts } = useGrandCityData();
   const router = useRouter();
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState('All');
   const [filterStatus, setFilterStatus] = useState('All');
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [editRole, setEditRole] = useState('');
-  const [editStatus, setEditStatus] = useState('');
+  const [editData, setEditData] = useState<Partial<User>>({});
   // Quick Actions: Add Employee modal state
   const [showAddEmployee, setShowAddEmployee] = useState(false);
   const [empName, setEmpName] = useState('');
@@ -20,21 +30,29 @@ export default function Users() {
   const [empRole, setEmpRole] = useState('Security');
   const [empLocation, setEmpLocation] = useState('HQ Office');
   const [empShift, setEmpShift] = useState('Day (9AM-5PM)');
-  const [empStatus, setEmpStatus] = useState<'On Duty' | 'Present' | 'On Site' | 'Off Duty'>('Present');
+  const [empStatus, setEmpStatus] = useState('active');
 
-  // Extract unique users from shifts data
-  const users = shifts.map(shift => ({
-    id: shift.id,
-    name: shift.employee,
-    email: `${shift.employee.toLowerCase().replace(' ', '.')}@grandcity.com`,
-    role: shift.role,
-    status: shift.status,
-    location: shift.location,
-    shift: shift.shift,
-    project: projects.find(p => p.name.includes(shift.location.split(' ')[0]))?.name || 'General',
-    joinDate: '2024-01-15',
-    lastActive: shift.status === 'Present' ? 'Active now' : '2 hours ago'
-  }));
+  // Fetch users from API
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/users');
+      if (response.ok) {
+        const data = await response.json();
+        setUsers(data);
+      } else {
+        console.error('Failed to fetch users');
+      }
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredUsers = users.filter(user => {
     const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -49,28 +67,55 @@ export default function Users() {
     setShowAddEmployee(true);
   };
 
-  const handleSubmitAddEmployee = () => {
+  const handleSubmitAddEmployee = async () => {
     const name = empName.trim();
+    const email = empEmail.trim();
+    
     if (!name) {
       alert('Please enter a name');
       return;
     }
-    const newShift = {
-      id: Date.now(),
-      employee: name,
-      role: empRole.trim() || 'Staff',
-      shift: empShift.trim() || 'Day (9AM-5PM)',
-      status: empStatus,
-      location: empLocation.trim() || 'HQ Office',
-    };
-    setShifts(prev => [...prev, newShift]);
-    setShowAddEmployee(false);
-    setEmpName('');
-    setEmpEmail('');
-    setEmpRole('Security');
-    setEmpLocation('HQ Office');
-    setEmpShift('Day (9AM-5PM)');
-    setEmpStatus('Present');
+    
+    if (!email) {
+      alert('Please enter an email');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name,
+          email,
+          role: empRole.trim() || 'Staff',
+          location: empLocation.trim() || 'HQ Office',
+          shift: empShift.trim() || 'Day (9AM-5PM)',
+          status: empStatus || 'active'
+        })
+      });
+
+      if (response.ok) {
+        const newUser = await response.json();
+        setUsers(prev => [...prev, newUser]);
+        setShowAddEmployee(false);
+        setEmpName('');
+        setEmpEmail('');
+        setEmpRole('Security');
+        setEmpLocation('HQ Office');
+        setEmpShift('Day (9AM-5PM)');
+        setEmpStatus('active');
+        alert('Employee added successfully!');
+      } else {
+        const error = await response.json();
+        alert('Failed to add employee: ' + (error.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error adding employee:', error);
+      alert('Error adding employee. Please try again.');
+    }
   };
 
   const handleExportAttendance = () => {
@@ -107,39 +152,92 @@ export default function Users() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Present': return 'text-green-600 bg-green-100';
-      case 'On Duty': return 'text-blue-600 bg-blue-100';
-      case 'On Site': return 'text-purple-600 bg-purple-100';
-      case 'On Leave': return 'text-yellow-600 bg-yellow-100';
+      case 'active': return 'text-green-600 bg-green-100';
+      case 'inactive': return 'text-gray-600 bg-gray-100';
+      case 'on_leave': return 'text-yellow-600 bg-yellow-100';
       default: return 'text-gray-600 bg-gray-100';
     }
   };
 
-  const handleRemoveUser = (id: number) => {
-    setShifts(prev => prev.filter(s => s.id !== id));
+  const handleRemoveUser = async (id: number) => {
+    if (!confirm('Are you sure you want to remove this user?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/users?id=${id}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        setUsers(prev => prev.filter(u => u.id !== id));
+        alert('User removed successfully!');
+      } else {
+        const error = await response.json();
+        alert('Failed to remove user: ' + (error.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error removing user:', error);
+      alert('Error removing user. Please try again.');
+    }
   };
 
-  const handleStartEdit = (id: number, role: string, status: string) => {
-    setEditingId(id);
-    setEditRole(role);
-    setEditStatus(status);
+  const handleStartEdit = (user: User) => {
+    setEditingId(user.id);
+    setEditData({
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      status: user.status,
+      location: user.location,
+      shift: user.shift,
+    });
   };
 
-  const handleSaveEdit = (id: number) => {
-    setShifts(prev => prev.map(s => s.id === id ? { ...s, role: editRole, status: editStatus as typeof s.status } : s));
-    setEditingId(null);
-    setEditRole('');
-    setEditStatus('');
+  const handleSaveEdit = async (id: number) => {
+    try {
+      const response = await fetch(`/api/users?id=${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(editData)
+      });
+
+      if (response.ok) {
+        const updatedUser = await response.json();
+        setUsers(prev => prev.map(u => u.id === id ? updatedUser : u));
+        setEditingId(null);
+        setEditData({});
+        alert('User updated successfully!');
+      } else {
+        const error = await response.json();
+        alert('Failed to update user: ' + (error.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error updating user:', error);
+      alert('Error updating user. Please try again.');
+    }
   };
 
   const handleCancelEdit = () => {
     setEditingId(null);
-    setEditRole('');
-    setEditStatus('');
+    setEditData({});
   };
 
   const uniqueRoles = ['All', ...Array.from(new Set(users.map(user => user.role)))];
-  const uniqueStatuses = ['All', ...Array.from(new Set(users.map(user => user.status)))];
+  const uniqueStatuses = ['All', 'active', 'inactive', 'on_leave'];
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <p className="mt-4 text-gray-600">Loading users...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -174,9 +272,9 @@ export default function Users() {
               </div>
             </div>
             <div className="ml-5">
-              <p className="text-sm font-medium text-gray-500">Present Today</p>
+              <p className="text-sm font-medium text-gray-500">Active Users</p>
               <p className="text-lg font-semibold text-gray-900">
-                {users.filter(u => u.status === 'Present' || u.status === 'On Duty').length}
+                {users.filter(u => u.status === 'active').length}
               </p>
             </div>
           </div>
@@ -190,9 +288,9 @@ export default function Users() {
               </div>
             </div>
             <div className="ml-5">
-              <p className="text-sm font-medium text-gray-500">On Site</p>
+              <p className="text-sm font-medium text-gray-500">On Leave</p>
               <p className="text-lg font-semibold text-gray-900">
-                {users.filter(u => u.status === 'On Site').length}
+                {users.filter(u => u.status === 'on_leave').length}
               </p>
             </div>
           </div>
@@ -206,9 +304,9 @@ export default function Users() {
               </div>
             </div>
             <div className="ml-5">
-              <p className="text-sm font-medium text-gray-500">Off Duty</p>
+              <p className="text-sm font-medium text-gray-500">Inactive</p>
               <p className="text-lg font-semibold text-gray-900">
-                {users.filter(u => u.status === 'Off Duty').length}
+                {users.filter(u => u.status === 'inactive').length}
               </p>
             </div>
           </div>
@@ -297,10 +395,7 @@ export default function Users() {
                     Shift
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Project
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Last Active
+                    Last Login
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
@@ -328,13 +423,17 @@ export default function Users() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       {editingId === user.id ? (
                         <select
-                          value={editRole}
-                          onChange={(e) => setEditRole(e.target.value)}
+                          value={editData.role || ''}
+                          onChange={(e) => setEditData({ ...editData, role: e.target.value })}
                           className="px-2 py-1 border border-gray-300 rounded text-sm"
                         >
-                          {[user.role, 'Security', 'Admin', 'Site Supervisor', 'HR Coordinator', 'Staff'].map(r => (
-                            <option key={r} value={r}>{r}</option>
-                          ))}
+                          <option value="Security">Security</option>
+                          <option value="Site Manager">Site Manager</option>
+                          <option value="Supervisor">Supervisor</option>
+                          <option value="Engineer">Engineer</option>
+                          <option value="Foreman">Foreman</option>
+                          <option value="Worker">Worker</option>
+                          <option value="Staff">Staff</option>
                         </select>
                       ) : (
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleColor(user.role)}`}>
@@ -345,36 +444,51 @@ export default function Users() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       {editingId === user.id ? (
                         <select
-                          value={editStatus}
-                          onChange={(e) => setEditStatus(e.target.value)}
+                          value={editData.status || ''}
+                          onChange={(e) => setEditData({ ...editData, status: e.target.value })}
                           className="px-2 py-1 border border-gray-300 rounded text-sm"
                         >
-                          {[user.status, 'Present', 'On Duty', 'On Site', 'On Leave'].map(s => (
-                            <option key={s} value={s}>{s}</option>
-                          ))}
+                          <option value="active">Active</option>
+                          <option value="inactive">Inactive</option>
+                          <option value="on_leave">On Leave</option>
                         </select>
                       ) : (
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(user.status)}`}>
-                          {user.status}
+                          {user.status === 'on_leave' ? 'On Leave' : user.status.charAt(0).toUpperCase() + user.status.slice(1)}
                         </span>
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {user.location}
+                      {editingId === user.id ? (
+                        <input
+                          type="text"
+                          value={editData.location || ''}
+                          onChange={(e) => setEditData({ ...editData, location: e.target.value })}
+                          className="px-2 py-1 border border-gray-300 rounded text-sm w-full"
+                        />
+                      ) : (
+                        user.location
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {user.shift}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {user.project}
+                      {editingId === user.id ? (
+                        <input
+                          type="text"
+                          value={editData.shift || ''}
+                          onChange={(e) => setEditData({ ...editData, shift: e.target.value })}
+                          className="px-2 py-1 border border-gray-300 rounded text-sm w-full"
+                        />
+                      ) : (
+                        user.shift
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {user.lastActive}
+                      {user.lastLogin ? new Date(user.lastLogin).toLocaleString() : 'Never'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">
                         <button
-                          onClick={() => alert(`${user.name} • ${user.email}\nRole: ${user.role}\nStatus: ${user.status}\nLocation: ${user.location}\nShift: ${user.shift}\nProject: ${user.project}`)}
+                          onClick={() => alert(`${user.name}\n${user.email}\nRole: ${user.role}\nStatus: ${user.status}\nLocation: ${user.location}\nShift: ${user.shift}`)}
                           className="text-blue-600 hover:text-blue-900"
                         >
                           View
@@ -396,7 +510,7 @@ export default function Users() {
                           </>
                         ) : (
                           <button
-                            onClick={() => handleStartEdit(user.id, user.role, user.status)}
+                            onClick={() => handleStartEdit(user)}
                             className="text-green-600 hover:text-green-900"
                           >
                             Edit
@@ -481,11 +595,10 @@ export default function Users() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                  <select value={empStatus} onChange={(e) => setEmpStatus(e.target.value as 'On Duty' | 'Present' | 'On Site' | 'Off Duty')} className="w-full px-3 py-2 border border-gray-300 rounded">
-                    <option value="Present">Present</option>
-                    <option value="On Duty">On Duty</option>
-                    <option value="On Site">On Site</option>
-                    <option value="Off Duty">Off Duty</option>
+                  <select value={empStatus} onChange={(e) => setEmpStatus(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded">
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                    <option value="on_leave">On Leave</option>
                   </select>
                 </div>
               </div>

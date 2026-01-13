@@ -37,7 +37,14 @@ export async function POST(request: Request) {
 
     const result = await sql`
       INSERT INTO shifts (employee, role, shift, status, location, date)
-      VALUES (${employee}, ${role}, ${shift}, ${status || 'Present'}, ${location}, ${date || 'CURRENT_DATE'})
+      VALUES (
+        ${employee},
+        ${role},
+        ${shift},
+        ${status || 'Present'},
+        ${location},
+        COALESCE(${date ?? null}, CURRENT_DATE)
+      )
       RETURNING *
     `;
 

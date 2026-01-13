@@ -12,7 +12,31 @@ export async function GET() {
     }
 
     const photoLogs = await sql`SELECT * FROM photo_logs ORDER BY created_at DESC`;
-    return NextResponse.json(photoLogs);
+    
+    // Fetch comments for each photo log
+    const photoLogsWithComments = await Promise.all(
+      photoLogs.map(async (log: any) => {
+        const comments = await sql`
+          SELECT id, user_name as user, text, time
+          FROM photo_comments
+          WHERE photo_log_id = ${log.id}
+          ORDER BY created_at ASC
+        `;
+        
+        return {
+          id: log.id,
+          project: log.project,
+          location: log.location,
+          photos: log.photos || 0,
+          uploadedBy: log.uploaded_by,
+          time: log.time,
+          tags: log.tags || [],
+          comments: comments
+        };
+      })
+    );
+    
+    return NextResponse.json(photoLogsWithComments);
   } catch (error) {
     console.error('Error fetching photo logs:', error);
     return NextResponse.json(
@@ -41,7 +65,18 @@ export async function POST(request: Request) {
       RETURNING *
     `;
 
-    return NextResponse.json(result[0], { status: 201 });
+    const newLog = result[0];
+    
+    return NextResponse.json({
+      id: newLog.id,
+      project: newLog.project,
+      location: newLog.location,
+      photos: newLog.photos || 0,
+      uploadedBy: newLog.uploaded_by,
+      time: newLog.time,
+      tags: newLog.tags || [],
+      comments: []
+    }, { status: 201 });
   } catch (error) {
     console.error('Error creating photo log:', error);
     return NextResponse.json(
