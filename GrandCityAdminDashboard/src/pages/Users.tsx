@@ -119,8 +119,8 @@ export default function Users() {
   };
 
   const handleExportAttendance = () => {
-    const headers = ['Name','Email','Role','Status','Location','Shift','Project','Last Active'];
-    const rows = filteredUsers.map(u => [u.name, u.email, u.role, u.status, u.location, u.shift, u.project, u.lastActive]);
+    const headers = ['Name','Email','Role','Status','Location','Shift','Last Login'];
+    const rows = filteredUsers.map(u => [u.name, u.email, u.role, u.status, u.location, u.shift, u.lastLogin || 'Never']);
     const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);

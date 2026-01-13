@@ -16,7 +16,7 @@ export async function GET() {
     // Fetch comments for each photo log
     const photoLogsWithComments = await Promise.all(
       photoLogs.map(async (log: any) => {
-        const comments = await sql`
+        const comments = await sql!`
           SELECT id, user_name as user, text, time
           FROM photo_comments
           WHERE photo_log_id = ${log.id}
