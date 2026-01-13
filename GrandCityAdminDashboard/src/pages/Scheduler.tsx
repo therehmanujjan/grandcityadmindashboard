@@ -40,6 +40,16 @@ export default function Scheduler() {
     performance: 0
   });
 
+  const [personnelForm, setPersonnelForm] = useState({
+    name: '',
+    email: '',
+    role: '',
+    location: '',
+    shift: '',
+    status: 'active'
+  });
+  const [editingPersonnelId, setEditingPersonnelId] = useState<number | null>(null);
+
   const fetchProperties = useCallback(async () => {
     try {
       const res = await fetch('/api/properties');
@@ -194,6 +204,72 @@ export default function Scheduler() {
     } catch (error) {
       console.error('Error adding vendor:', error);
       alert('Failed to add vendor');
+    }
+  };
+
+  const handleSavePersonnel = async () => {
+    if (!personnelForm.name || !personnelForm.email || !personnelForm.role) {
+      alert('Please fill in Name, Email, and Role');
+      return;
+    }
+
+    const isEdit = editingPersonnelId !== null;
+    const url = isEdit ? `/api/users?id=${editingPersonnelId}` : '/api/users';
+    const method = isEdit ? 'PATCH' : 'POST';
+
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(personnelForm)
+      });
+
+      if (res.ok) {
+        await fetchPersonnel();
+        setPersonnelForm({ name: '', email: '', role: '', location: '', shift: '', status: 'active' });
+        setEditingPersonnelId(null);
+        alert(isEdit ? 'Personnel updated successfully!' : 'Personnel added successfully!');
+      } else {
+        const error = await res.json();
+        alert(`Error: ${error.error}`);
+      }
+    } catch (error) {
+      console.error('Error saving personnel:', error);
+      alert('Failed to save personnel');
+    }
+  };
+
+  const handleEditPersonnel = (p: User) => {
+    setPersonnelForm({
+      name: p.name || '',
+      email: p.email || '',
+      role: p.role || '',
+      location: p.location || '',
+      shift: p.shift || '',
+      status: p.status || 'active'
+    });
+    setEditingPersonnelId(p.id);
+    setActiveTab('personnel');
+  };
+
+  const handleDeletePersonnel = async (id: number, name: string) => {
+    if (!confirm(`Delete ${name}? This cannot be undone.`)) return;
+    try {
+      const res = await fetch(`/api/users?id=${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        await fetchPersonnel();
+        if (editingPersonnelId === id) {
+          setEditingPersonnelId(null);
+          setPersonnelForm({ name: '', email: '', role: '', location: '', shift: '', status: 'active' });
+        }
+        alert('Personnel deleted successfully!');
+      } else {
+        const error = await res.json();
+        alert(`Error: ${error.error}`);
+      }
+    } catch (error) {
+      console.error('Error deleting personnel:', error);
+      alert('Failed to delete personnel');
     }
   };
 
@@ -717,21 +793,133 @@ export default function Scheduler() {
           )}
 
           {activeTab === 'personnel' && (
-            <div>
-              <h2 className="text-xl font-semibold mb-4">Personnel Directory</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {personnel.map(p => (
-                  <div key={p.id} className="border border-gray-200 rounded-lg p-4">
-                    <div className="font-semibold text-lg">{p.name}</div>
-                    <div className="text-sm text-gray-600">Role: {p.role}</div>
-                    <div className="text-sm text-gray-600">Email: {p.email}</div>
-                    <div className="text-sm text-gray-600">Location: {p.location}</div>
-                    <span className={`inline-block mt-2 px-2 py-1 text-xs rounded ${p.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                      }`}>
-                      {p.status}
-                    </span>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-1">
+                <h2 className="text-xl font-semibold mb-4">{editingPersonnelId ? 'Edit Personnel' : 'Add Personnel'}</h2>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                    <input
+                      type="text"
+                      value={personnelForm.name}
+                      onChange={(e) => setPersonnelForm({ ...personnelForm, name: e.target.value })}
+                      className="w-full border border-gray-300 rounded px-3 py-2"
+                      placeholder="Enter full name"
+                    />
                   </div>
-                ))}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <input
+                      type="email"
+                      value={personnelForm.email}
+                      onChange={(e) => setPersonnelForm({ ...personnelForm, email: e.target.value })}
+                      className="w-full border border-gray-300 rounded px-3 py-2"
+                      placeholder="name@grandcity.com"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                    <select
+                      value={personnelForm.role}
+                      onChange={(e) => setPersonnelForm({ ...personnelForm, role: e.target.value })}
+                      className="w-full border border-gray-300 rounded px-3 py-2"
+                    >
+                      <option value="">Select Role</option>
+                      <option value="Electrician">Electrician</option>
+                      <option value="Car Maintenance">Car Maintenance</option>
+                      <option value="IT Support">IT Support</option>
+                      <option value="HR">HR</option>
+                      <option value="Maintenance">Maintenance</option>
+                      <option value="Plumber">Plumber</option>
+                      <option value="HVAC Technician">HVAC Technician</option>
+                      <option value="Security Manager">Security Manager</option>
+                      <option value="Facility Manager">Facility Manager</option>
+                      <option value="Carpenter">Carpenter</option>
+                    </select>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                      <input
+                        type="text"
+                        value={personnelForm.location}
+                        onChange={(e) => setPersonnelForm({ ...personnelForm, location: e.target.value })}
+                        className="w-full border border-gray-300 rounded px-3 py-2"
+                        placeholder="Grand City Plaza"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Shift</label>
+                      <input
+                        type="text"
+                        value={personnelForm.shift}
+                        onChange={(e) => setPersonnelForm({ ...personnelForm, shift: e.target.value })}
+                        className="w-full border border-gray-300 rounded px-3 py-2"
+                        placeholder="Morning / Evening / Night"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                    <select
+                      value={personnelForm.status}
+                      onChange={(e) => setPersonnelForm({ ...personnelForm, status: e.target.value })}
+                      className="w-full border border-gray-300 rounded px-3 py-2"
+                    >
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
+                    </select>
+                  </div>
+                  <button
+                    onClick={handleSavePersonnel}
+                    className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600 font-semibold"
+                  >
+                    {editingPersonnelId ? 'Save Changes' : '+ Add Personnel'}
+                  </button>
+                  {editingPersonnelId && (
+                    <button
+                      onClick={() => {
+                        setEditingPersonnelId(null);
+                        setPersonnelForm({ name: '', email: '', role: '', location: '', shift: '', status: 'active' });
+                      }}
+                      className="w-full bg-gray-100 text-gray-700 py-2 rounded hover:bg-gray-200 font-semibold"
+                    >
+                      Cancel Edit
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="lg:col-span-2">
+                <h2 className="text-xl font-semibold mb-4">Personnel Directory</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {personnel.map(p => (
+                    <div key={p.id} className="border border-gray-200 rounded-lg p-4">
+                      <div className="font-semibold text-lg">{p.name}</div>
+                      <div className="text-sm text-gray-600">Role: {p.role}</div>
+                      <div className="text-sm text-gray-600">Email: {p.email}</div>
+                      <div className="text-sm text-gray-600">Location: {p.location}</div>
+                      <span className={`inline-block mt-2 px-2 py-1 text-xs rounded ${p.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                        }`}>
+                        {p.status}
+                      </span>
+                      <div className="mt-3 flex gap-2">
+                        <button
+                          onClick={() => handleEditPersonnel(p)}
+                          className="text-xs bg-blue-50 text-blue-700 px-3 py-1 rounded border border-blue-200 hover:bg-blue-100"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeletePersonnel(p.id, p.name)}
+                          className="text-xs bg-red-50 text-red-700 px-3 py-1 rounded border border-red-200 hover:bg-red-100"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           )}
