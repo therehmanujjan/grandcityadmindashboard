@@ -34,5 +34,13 @@ module.exports = {
       client.release();
     }
   },
+  
+  // Get a client for transaction handling
+  getClient: async () => {
+    const client = await pool.connect();
+    await client.query('SET search_path TO guestpass');
+    return client;
+  },
+  
   pool
 };

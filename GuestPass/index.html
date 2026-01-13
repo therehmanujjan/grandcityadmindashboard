@@ -301,10 +301,14 @@
                 const result = await response.json();
                 console.log('=== Visit Save Response ===');
                 console.log('Full result:', result);
-                console.log('Visit code from API:', result.visit_code);
-                console.log('Visit ID from API:', result.id);
+                
+                // Extract visit object from response
+                const visitData = result.visit || result;
+                console.log('Visit data:', visitData);
+                console.log('Visit code from API:', visitData.visit_code);
+                console.log('Visit ID from API:', visitData.id);
 
-                return result;
+                return visitData;
             } catch (e) {
                 console.error('Error saving visit:', e);
                 alert('Unable to save visit to database. Please check your connection.');
@@ -837,7 +841,29 @@ Visit Management System`;
             useEffect(() => {
                 const loadVisits = async () => {
                     const allVisits = await getVisits();
-                    const myVisits = allVisits.filter(v => v.executiveId === user.executiveId);
+                    console.log('=== Executive Dashboard - Loading Visits ===');
+                    console.log('Total visits fetched:', allVisits.length);
+                    console.log('User:', user);
+                    console.log('User executive ID:', user.executiveId);
+                    console.log('User executive ID type:', typeof user.executiveId);
+                    
+                    if (allVisits.length > 0) {
+                        console.log('Sample visit:', allVisits[0]);
+                        console.log('Sample visit executive_id type:', typeof allVisits[0].executiveId);
+                    }
+                    
+                    const myVisits = allVisits.filter(v => {
+                        const match = v.executiveId === user.executiveId;
+                        if (!match) {
+                            console.log(`Visit ${v.code}: executiveId=${v.executiveId} (${typeof v.executiveId}) vs user=${user.executiveId} (${typeof user.executiveId})`);
+                        }
+                        return match;
+                    });
+                    
+                    console.log('Filtered visits for this executive:', myVisits.length);
+                    if (myVisits.length === 0 && allVisits.length > 0) {
+                        console.warn('⚠️ No visits matched! Check if executiveId comparison is working correctly');
+                    }
                     setVisits(myVisits);
                 };
                 loadVisits();

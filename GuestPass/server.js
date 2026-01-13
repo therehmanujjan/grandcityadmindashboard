@@ -12,11 +12,40 @@ const JWT_EXPIRES_IN = '24h';
 
 // Middleware
 app.use(express.json());
-app.use(express.static(__dirname));
 
-// Security headers
+// IMPORTANT: Static files middleware with redirect disabled
+// This prevents express.static from treating /api as a directory
+app.use(express.static(__dirname, { 
+  redirect: false,
+  index: false  // Don't serve index files for directories
+}));
+
+// CORS middleware - allow admin dashboard
 app.use((req, res, next) => {
-  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  // Get allowed origins from environment or use defaults
+  const defaultOrigins = [
+    'http://localhost:3000', 
+    'http://localhost:3001',
+    'https://grandcityadmindashboard.vercel.app',
+    'https://grandcityadmindashboard-mjns.vercel.app'
+  ];
+  const corsOrigins = process.env.CORS_ORIGINS || process.env.CORS_ORIGIN || '';
+  const allowedOrigins = corsOrigins 
+    ? corsOrigins.split(',').map(o => o.trim())
+    : defaultOrigins;
+  
+  const origin = req.headers.origin;
+  
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  }
+  
+  // Allow framing from allowed origins using CSP
+  const frameAncestors = allowedOrigins.join(' ');
+  res.setHeader('Content-Security-Policy', `frame-ancestors 'self' ${frameAncestors}`);
   res.setHeader('X-Content-Type-Options', 'nosniff');
   
   // Prevent caching of HTML files to avoid serving stale code
@@ -24,6 +53,11 @@ app.use((req, res, next) => {
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
+  }
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
   }
   
   next();
@@ -230,10 +264,11 @@ app.get('/api/visits', authenticateToken, async (req, res) => {
       LEFT JOIN users u ON e.user_id = u.id
       ORDER BY v.scheduled_date DESC, v.scheduled_time_from DESC
     `);
+    
     res.json(result.rows);
   } catch (error) {
     console.error('Error fetching visits:', error);
-    res.status(500).json({ error: 'Failed to fetch visits' });
+    res.status(500).json({ error: 'Failed to fetch visits', details: error.message });
   }
 });
 
@@ -296,13 +331,15 @@ app.post('/api/visits', authenticateToken, async (req, res) => {
   
   console.log('Creating visit with data:', { visitor, executive_id, date, time_from, time_to, purpose, visit_type });
   
+  const client = await db.getClient();
+  
   try {
     // Start transaction
-    await db.query('BEGIN');
+    await client.query('BEGIN');
 
     // If executive_id is a number (legacy ID), get the first available executive UUID
     if (typeof executive_id === 'number' || !executive_id.includes('-')) {
-      const execResult = await db.query('SELECT id FROM executives LIMIT 1');
+      const execResult = await client.query('SELECT id FROM executives LIMIT 1');
       if (execResult.rows.length > 0) {
         executive_id = execResult.rows[0].id;
         console.log('Converted integer executive_id to UUID:', executive_id);
@@ -312,7 +349,7 @@ app.post('/api/visits', authenticateToken, async (req, res) => {
     }
 
     // Insert or get visitor
-    let visitorResult = await db.query(
+    let visitorResult = await client.query(
       'SELECT id FROM visitors WHERE phone = $1',
       [visitor.phone]
     );
@@ -322,13 +359,13 @@ app.post('/api/visits', authenticateToken, async (req, res) => {
       visitorId = visitorResult.rows[0].id;
       console.log('Found existing visitor:', visitorId);
       // Update visitor info
-      await db.query(
+      await client.query(
         'UPDATE visitors SET full_name = $1, email = $2, company = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $4',
         [visitor.name, visitor.email, visitor.company, visitorId]
       );
     } else {
       // Insert new visitor
-      const newVisitor = await db.query(
+      const newVisitor = await client.query(
         'INSERT INTO visitors (full_name, email, phone, company) VALUES ($1, $2, $3, $4) RETURNING id',
         [visitor.name, visitor.email, visitor.phone, visitor.company]
       );
@@ -341,21 +378,45 @@ app.post('/api/visits', authenticateToken, async (req, res) => {
 
     console.log('Inserting visit with type:', visit_type, 'approval:', approvalStatus);
 
-    // Insert visit without code - let database trigger generate it
-    const visitResult = await db.query(
-      `INSERT INTO visits (visitor_id, executive_id, scheduled_date, scheduled_time_from, scheduled_time_to, purpose_of_visit, visit_type, visit_status, approval_status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, 'scheduled', $8)
+    // Generate visit code manually to avoid trigger issues
+    const year = new Date(date).getFullYear();
+    const codeResult = await client.query(`
+      SELECT visit_code 
+      FROM visits 
+      WHERE visit_code LIKE $1
+      ORDER BY visit_code DESC 
+      LIMIT 1
+    `, [`GC-${year}-%`]);
+    
+    let visitCode;
+    let nextNumber = 1;
+    
+    if (codeResult.rows.length > 0) {
+      const lastCode = codeResult.rows[0].visit_code;
+      const match = lastCode.match(/(\d{6})$/);
+      if (match) {
+        nextNumber = parseInt(match[1]) + 1;
+      }
+    }
+    
+    visitCode = `GC-${year}-${String(nextNumber).padStart(6, '0')}`;
+    console.log('Generated visit code:', visitCode);
+
+    // Insert visit with generated code
+    const visitResult = await client.query(
+      `INSERT INTO visits (visit_code, visitor_id, executive_id, scheduled_date, scheduled_time_from, scheduled_time_to, purpose_of_visit, visit_type, visit_status, approval_status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'scheduled', $9)
        RETURNING *`,
-      [visitorId, executive_id, date, time_from, time_to, purpose, visit_type, approvalStatus]
+      [visitCode, visitorId, executive_id, date, time_from, time_to, purpose, visit_type, approvalStatus]
     );
 
-    await db.query('COMMIT');
+    await client.query('COMMIT');
 
     console.log('Visit created successfully:', visitResult.rows[0].id);
     console.log('Visit code from insert:', visitResult.rows[0].visit_code);
 
     // Get complete visit info
-    const completeVisit = await db.query(`
+    const completeVisit = await client.query(`
       SELECT v.*, 
              vis.full_name as visitor_name,
              vis.email as visitor_email,
@@ -377,9 +438,11 @@ app.post('/api/visits', authenticateToken, async (req, res) => {
       visit: completeVisit.rows[0]
     });
   } catch (error) {
-    await db.query('ROLLBACK');
+    await client.query('ROLLBACK');
     console.error('Error creating visit:', error);
     res.status(500).json({ error: 'Failed to create visit', details: error.message });
+  } finally {
+    client.release();
   }
 });
 

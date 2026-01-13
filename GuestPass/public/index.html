@@ -260,10 +260,14 @@
                 const result = await response.json();
                 console.log('=== Visit Save Response ===');
                 console.log('Full result:', result);
-                console.log('Visit code from API:', result.visit_code);
-                console.log('Visit ID from API:', result.id);
                 
-                return result;
+                // Extract visit object from response
+                const visitData = result.visit || result;
+                console.log('Visit data:', visitData);
+                console.log('Visit code from API:', visitData.visit_code);
+                console.log('Visit ID from API:', visitData.id);
+                
+                return visitData;
             } catch (e) {
                 console.error('Error saving visit:', e);
                 alert('Unable to save visit to database. Please check your connection.');
@@ -832,7 +836,17 @@ Visit Management System`;
             useEffect(() => {
                 const loadVisits = async () => {
                     const allVisits = await getVisits();
-                    const myVisits = allVisits.filter(v => v.executiveId === user.executiveId);
+                    console.log('=== Executive Dashboard - Loading Visits ===');
+                    console.log('Total visits fetched:', allVisits.length);
+                    console.log('User executive ID:', user.executiveId);
+                    console.log('All visits:', allVisits);
+                    
+                    const myVisits = allVisits.filter(v => {
+                        console.log(`Comparing visit ${v.code}: executiveId=${v.executiveId} with user=${user.executiveId}, match=${v.executiveId === user.executiveId}`);
+                        return v.executiveId === user.executiveId;
+                    });
+                    
+                    console.log('Filtered visits for this executive:', myVisits.length);
                     setVisits(myVisits);
                 };
                 loadVisits();
@@ -850,6 +864,7 @@ Visit Management System`;
             const handleApproval = async (visitId, status) => {
                 await updateVisit(visitId, { approval: status, approvedAt: new Date().toISOString() });
                 const allVisits = await getVisits();
+                console.log('After approval - filtering visits');
                 const myVisits = allVisits.filter(v => v.executiveId === user.executiveId);
                 setVisits(myVisits);
             };
