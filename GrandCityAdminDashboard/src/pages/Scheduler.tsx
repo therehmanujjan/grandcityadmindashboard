@@ -329,7 +329,12 @@ export default function Scheduler() {
           className={`min-h-20 p-2 border border-gray-200 cursor-pointer transition-all hover:border-blue-500 hover:shadow-md ${isToday ? 'bg-blue-500 text-white' : 'bg-white'
             }`}
           onClick={() => {
-            setFormData({ ...formData, date: dateObj.toISOString().split('T')[0] });
+            // Format date in local timezone to avoid timezone shift issues
+            const year = dateObj.getFullYear();
+            const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const day = String(dateObj.getDate()).padStart(2, '0');
+            const localDateString = `${year}-${month}-${day}`;
+            setFormData({ ...formData, date: localDateString });
             setActiveTab('maintenance');
           }}
         >
