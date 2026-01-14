@@ -39,13 +39,30 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { project, user_name, message, time } = body;
+    const { project, user_name, message } = body;
 
+    // Validate required fields
+    if (!project || !user_name || !message) {
+      return NextResponse.json(
+        { error: 'project, user_name, and message are required' },
+        { status: 400 }
+      );
+    }
+
+    // New messages should be unread by default
+    // created_at will be set automatically by the database
     const result = await sql`
-      INSERT INTO communications (project, user_name, message, time, unread)
-      VALUES (${project}, ${user_name}, ${message}, ${time || 'Just now'}, ${0})
+      INSERT INTO communications (project, user_name, message, unread)
+      VALUES (${project}, ${user_name}, ${message}, ${1})
       RETURNING *
     `;
+
+    if (result.length === 0) {
+      return NextResponse.json(
+        { error: 'Failed to create communication' },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json(result[0], { status: 201 });
   } catch (error) {
@@ -57,7 +74,7 @@ export async function POST(request: Request) {
   }
 }
 
-// PATCH /api/communications/:id - Mark as read
+// PATCH /api/communications?id=:id - Update communication (supports partial updates)
 export async function PATCH(request: Request) {
   try {
     if (!sql) {
@@ -77,18 +94,82 @@ export async function PATCH(request: Request) {
       );
     }
 
+    const body = await request.json();
+    const { unread } = body;
+
+    // Validate unread value if provided
+    if (unread !== undefined && unread !== 0 && unread !== 1) {
+      return NextResponse.json(
+        { error: 'unread must be 0 or 1' },
+        { status: 400 }
+      );
+    }
+
+    // Update with the provided unread value
+    const unreadValue = unread !== undefined ? unread : 0;
+
     const result = await sql`
       UPDATE communications 
-      SET unread = 0, updated_at = NOW()
+      SET unread = ${unreadValue}, updated_at = NOW()
       WHERE id = ${id}
       RETURNING *
     `;
+
+    if (result.length === 0) {
+      return NextResponse.json(
+        { error: 'Communication not found' },
+        { status: 404 }
+      );
+    }
 
     return NextResponse.json(result[0]);
   } catch (error) {
     console.error('Error updating communication:', error);
     return NextResponse.json(
       { error: 'Failed to update communication' },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE /api/communications?id=:id - Delete a communication
+export async function DELETE(request: Request) {
+  try {
+    if (!sql) {
+      return NextResponse.json(
+        { error: 'Database not configured' },
+        { status: 500 }
+      );
+    }
+
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+
+    if (!id) {
+      return NextResponse.json(
+        { error: 'ID is required' },
+        { status: 400 }
+      );
+    }
+
+    const result = await sql`
+      DELETE FROM communications 
+      WHERE id = ${id}
+      RETURNING *
+    `;
+
+    if (result.length === 0) {
+      return NextResponse.json(
+        { error: 'Communication not found' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({ success: true, deleted: result[0] });
+  } catch (error) {
+    console.error('Error deleting communication:', error);
+    return NextResponse.json(
+      { error: 'Failed to delete communication' },
       { status: 500 }
     );
   }

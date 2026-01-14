@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Project } from '../types';
 import { useGrandCityData } from '../hooks/useGrandCityData';
+import { formatRelativeTime } from '../utils/formatTime';
 import {
   Modal,
   ShiftForm,
@@ -184,8 +185,8 @@ export default function Dashboard() {
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === tab.id
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
             >
               {tab.name}
@@ -318,7 +319,7 @@ export default function Dashboard() {
                   <div key={task.id} className="flex items-center space-x-3">
                     <div className="flex-shrink-0">
                       <div className={`w-3 h-3 rounded-full ${task.status === 'Completed' ? 'bg-green-500' :
-                          task.status === 'In Progress' ? 'bg-blue-500' : 'bg-gray-300'
+                        task.status === 'In Progress' ? 'bg-blue-500' : 'bg-gray-300'
                         }`}></div>
                     </div>
                     <div className="flex-1 min-w-0">
@@ -392,11 +393,11 @@ export default function Dashboard() {
                           {p.type}
                         </span>
                         <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${p.status === 'Pending' ? 'bg-yellow-100 text-yellow-700' :
-                            p.status === 'Approved' ? 'bg-blue-100 text-blue-700' :
-                              p.status === 'Processed' ? 'bg-green-100 text-green-700' :
-                                p.status === 'Confirmed' ? 'bg-emerald-100 text-emerald-700' :
-                                  p.status === 'Audit Requested' ? 'bg-orange-100 text-orange-700' :
-                                    'bg-purple-100 text-purple-700'
+                          p.status === 'Approved' ? 'bg-blue-100 text-blue-700' :
+                            p.status === 'Processed' ? 'bg-green-100 text-green-700' :
+                              p.status === 'Confirmed' ? 'bg-emerald-100 text-emerald-700' :
+                                p.status === 'Audit Requested' ? 'bg-orange-100 text-orange-700' :
+                                  'bg-purple-100 text-purple-700'
                           }`}>
                           {p.status}
                         </span>
@@ -822,7 +823,7 @@ export default function Dashboard() {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900">{comm.user}</p>
                       <p className="text-sm text-gray-500 truncate">{comm.message}</p>
-                      <p className="text-xs text-gray-400">{comm.time} • {comm.project}</p>
+                      <p className="text-xs text-gray-400">{formatRelativeTime(comm.time)} • {comm.project}</p>
                       {openCommId === comm.id && (
                         <div className="mt-3 space-y-2">
                           <textarea
@@ -833,12 +834,22 @@ export default function Dashboard() {
                           />
                           <div className="flex items-center gap-2">
                             <button
-                              onClick={() => {
+                              onClick={async () => {
                                 if (!replyText.trim()) return;
-                                setCommunications(prev => [
-                                  ...prev,
-                                  { id: prev.length + 1, project: comm.project, user: 'You', message: replyText.trim(), time: 'Just now', unread: 0 }
-                                ]);
+
+                                // Use the hook's handleAddCommunication which persists to DB
+                                const replyData = {
+                                  project: comm.project,
+                                  user: 'You',
+                                  message: replyText.trim()
+                                };
+
+                                // Temporarily store in formData for handleAddCommunication
+                                const originalFormData = { ...formData };
+                                setFormData(replyData);
+                                await handleAddCommunication();
+                                setFormData(originalFormData);
+
                                 setReplyText('');
                                 setOpenCommId(null);
                               }}

@@ -125,7 +125,7 @@ export const useGrandCityData = () => {
             project: c.project,
             user: c.user_name,
             message: c.message,
-            time: c.time,
+            time: c.created_at, // Use created_at timestamp for dynamic time display
             unread: c.unread || 0
           })));
         }
@@ -360,8 +360,7 @@ export const useGrandCityData = () => {
     const commData = {
       project: formData.project || 'General',
       user_name: formData.user || 'Admin',
-      message: formData.message || 'New message',
-      time: 'Just now'
+      message: formData.message || 'New message'
     };
 
     try {
@@ -378,7 +377,7 @@ export const useGrandCityData = () => {
           project: newComm.project,
           user: newComm.user_name,
           message: newComm.message,
-          time: newComm.time,
+          time: newComm.created_at, // Use created_at for time display
           unread: newComm.unread || 0
         }, ...communications]);
       }
@@ -392,12 +391,23 @@ export const useGrandCityData = () => {
 
   const handleMarkAsRead = async (id: number) => {
     try {
-      const res = await fetch(`/api/communications?id=${id}`, { method: 'PATCH' });
+      const res = await fetch(`/api/communications?id=${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ unread: 0 })
+      });
+
       if (res.ok) {
+        const updated = await res.json();
         setCommunications(communications.map(c => c.id === id ? { ...c, unread: 0 } : c));
+      } else {
+        const error = await res.json();
+        console.error('Failed to mark as read:', error);
+        alert(`Failed to mark as read: ${error.error || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('Failed to mark as read:', error);
+      alert('Failed to mark as read. Please check your connection.');
     }
   };
 
@@ -748,27 +758,86 @@ export const useGrandCityData = () => {
     }));
   };
 
-  const handleMarkAsUnread = (id: number) => {
-    setCommunications(prev => prev.map(c => c.id === id ? { ...c, unread: 1 } : c));
+  const handleMarkAsUnread = async (id: number) => {
+    try {
+      const res = await fetch(`/api/communications?id=${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ unread: 1 })
+      });
+
+      if (res.ok) {
+        const updated = await res.json();
+        setCommunications(prev => prev.map(c => c.id === id ? { ...c, unread: 1 } : c));
+      } else {
+        const error = await res.json();
+        console.error('Failed to mark as unread:', error);
+        alert(`Failed to mark as unread: ${error.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Failed to mark as unread:', error);
+      alert('Failed to mark as unread. Please check your connection.');
+    }
   };
 
-  const handleDeleteCommunication = (id: number) => {
+  const handleDeleteCommunication = async (id: number) => {
     if (!confirm('Delete this message?')) return;
-    setCommunications(prev => prev.filter(c => c.id !== id));
+
+    try {
+      const res = await fetch(`/api/communications?id=${id}`, {
+        method: 'DELETE'
+      });
+
+      if (res.ok) {
+        setCommunications(prev => prev.filter(c => c.id !== id));
+      } else {
+        const error = await res.json();
+        console.error('Failed to delete communication:', error);
+        alert(`Failed to delete message: ${error.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Failed to delete communication:', error);
+      alert('Failed to delete message. Please check your connection.');
+    }
   };
 
-  const handleForwardCommunication = (id: number, toUser: string) => {
+  const handleForwardCommunication = async (id: number, toUser: string) => {
     const original = communications.find(c => c.id === id);
     if (!original) return;
-    const forwarded: Communication = {
-      id: communications.length + 1,
+
+    const forwardedData = {
       project: original.project,
-      user: toUser,
-      message: `Forwarded: ${original.message}`,
-      time: 'Just now',
-      unread: 1,
+      user_name: toUser,
+      message: `Forwarded: ${original.message}`
     };
-    setCommunications([forwarded, ...communications]);
+
+    try {
+      const res = await fetch('/api/communications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(forwardedData)
+      });
+
+      if (res.ok) {
+        const newComm = await res.json();
+        const forwarded: Communication = {
+          id: newComm.id,
+          project: newComm.project,
+          user: newComm.user_name,
+          message: newComm.message,
+          time: newComm.created_at, // Use created_at for time display
+          unread: newComm.unread || 1,
+        };
+        setCommunications([forwarded, ...communications]);
+      } else {
+        const error = await res.json();
+        console.error('Failed to forward communication:', error);
+        alert(`Failed to forward message: ${error.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Failed to forward communication:', error);
+      alert('Failed to forward message. Please check your connection.');
+    }
   };
 
   const handleUpdateProjectStatus = (id: number, status: Project['status']) => {
@@ -818,7 +887,7 @@ export const useGrandCityData = () => {
 
   const handleAddPhotoComment = async (logId: number, text: string, user: string = 'Admin') => {
     if (!text.trim()) return;
-    
+
     try {
       const res = await fetch('/api/photo-comments', {
         method: 'POST',
@@ -832,9 +901,9 @@ export const useGrandCityData = () => {
 
       if (res.ok) {
         const newComment = await res.json();
-        setPhotoLogs(prev => prev.map(l => 
-          l.id === logId 
-            ? { ...l, comments: [...(l.comments || []), newComment] } 
+        setPhotoLogs(prev => prev.map(l =>
+          l.id === logId
+            ? { ...l, comments: [...(l.comments || []), newComment] }
             : l
         ));
       } else {
