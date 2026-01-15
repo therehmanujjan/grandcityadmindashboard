@@ -52,10 +52,18 @@ export default function Scheduler() {
 
   const fetchProperties = useCallback(async () => {
     try {
+      console.log('Fetching properties from API...');
       const res = await fetch('/api/properties');
+      console.log('API response status:', res.status, res.statusText);
+      
       if (res.ok) {
         const data = await res.json();
+        console.log('Fetched properties:', data);
+        console.log('Properties count:', data?.length);
         setProperties(data);
+      } else {
+        const errorData = await res.json().catch(() => ({ error: 'Unknown error' }));
+        console.error('Failed to fetch properties:', res.status, errorData);
       }
     } catch (error) {
       console.error('Error fetching properties:', error);
